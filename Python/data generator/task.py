@@ -8,4 +8,5 @@ class Task:
     assigned_machine: int
     preceding_task: int
     succeeding_task: int
+    schedule: int
 
