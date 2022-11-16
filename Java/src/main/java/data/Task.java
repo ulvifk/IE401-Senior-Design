@@ -15,7 +15,7 @@ public class Task {
     private int precedingTaskId;
     private int succeedingTaskId;
 
-    private Integer oldScheduleTime;
+    private int oldScheduleTime;
 
     public double getProcessingTime() {
         return processingTime;

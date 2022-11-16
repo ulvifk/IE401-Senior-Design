@@ -16,6 +16,9 @@ public class Parameters {
     private ArrayList<Task> setOfTasks;
     private ArrayList<Machine> setOfMachines;
     private int finalTimePoint = 1000;
+    private double alphaCompletionTime = 1;
+    private double alphaRobust = 1;
+    private double alphaTardiness = 1;
 
     public Parameters(){
         this.setOfJobs = new ArrayList<>();
@@ -73,6 +76,7 @@ public class Parameters {
                 task.setJobWhichBelongs(job);
                 task.setPrecedingTaskId(taskObject.get("preceding_task").getAsInt());
                 task.setSucceedingTaskId(taskObject.get("succeeding_task").getAsInt());
+                task.setOldScheduleTime(taskObject.get("schedule").getAsInt());
 
                 int machineId = taskObject.get("assigned_machine").getAsInt();
                 Machine machine = this.setOfMachines.stream().filter(m -> m.getId() == machineId).findAny().orElse(null);
@@ -115,5 +119,17 @@ public class Parameters {
 
     public int getFinalTimePoint() {
         return finalTimePoint;
+    }
+
+    public double getAlphaCompletionTime() {
+        return alphaCompletionTime;
+    }
+
+    public double getAlphaRobust() {
+        return alphaRobust;
+    }
+
+    public double getAlphaTardiness() {
+        return alphaTardiness;
     }
 }
