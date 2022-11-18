@@ -10,6 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class Parameters {
     private ArrayList<Job> setOfJobs;
@@ -105,6 +106,16 @@ public class Parameters {
             i.setSucceedingTask(this.setOfTasks.stream().filter(task -> task.getId() == i.getSucceedingTaskId()).findAny().orElse(null));
         }
     }
+
+    public List<Integer> getSetOfTardyTimes(Task i){
+        List<Integer> setOfTardyPoints = new ArrayList<>();
+        for(int t = (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime()) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime() + 1) : 0;
+            t <= this.finalTimePoint; t++){
+            setOfTardyPoints.add(t);
+        }
+        return setOfTardyPoints;
+    }
+
     public ArrayList<Job> getSetOfJobs() {
         return setOfJobs;
     }

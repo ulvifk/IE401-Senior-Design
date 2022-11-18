@@ -7,33 +7,51 @@ import gurobi.GRBEnv;
 import gurobi.GRBException;
 import gurobi.GRBModel;
 import gurobi.GRBVar;
+import output.ScenarioUpdater;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 
 public class Model {
 
-    public Model(Parameters parameters) throws GRBException, FileNotFoundException {
-        GRBEnv env = new GRBEnv();
-        GRBModel model = new GRBModel(env);
+    private final GRBEnv env;
+    private final GRBModel model;
 
-        model.set(GRB.DoubleParam.TimeLimit, 300);
+    private final Parameters parameters;
+    private Variables variables;
 
-        Variables variables = new Variables();
+    public Model(Parameters parameters) throws GRBException{
+        this.env = new GRBEnv();
+        this.model = new GRBModel(env);
+        this.parameters = parameters;
+
+    }
+
+    public void create() throws GRBException {
+        this.variables = new Variables();
         variables.createVariables(model, parameters);
 
         Constraints.setConstraints(model, variables, parameters);
         Objective.setObjective(model, parameters, variables);
+    }
 
+    public void optimize(int timeLimit, boolean isWriteLp) throws GRBException {
+        model.set(GRB.DoubleParam.TimeLimit, timeLimit);
 
-        model.write("model.lp");
+        if(isWriteLp)
+            model.write("model.lp");
 
         model.optimize();
+    }
 
-        writeSolutionToCsv("Solution.csv", variables);
+    public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {
+        writeSolutionToCsv("Solution.csv", this.variables);
+        ScenarioUpdater.updateScenario(inputPath, outputPath, this.parameters, this.variables);
+    }
 
-        env.dispose();
-        model.dispose();
+    public void dispose() throws GRBException {
+        this.env.dispose();
+        this.model.dispose();
     }
 
     private void printSolution(Variables variables) throws GRBException {
@@ -62,5 +80,13 @@ public class Model {
             }
         }
         out.close();
+    }
+
+    public GRBModel getModel() {
+        return model;
+    }
+
+    public Variables getVariables() {
+        return variables;
     }
 }

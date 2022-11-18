@@ -29,7 +29,7 @@ public class Objective {
 
         for(Job job : parameters.getSetOfJobs()){
             Task lastTask = job.getTasks().get(job.getTasks().size()-1);
-            for(int t : getSetOfTardyTimes(parameters, lastTask)){
+            for(int t : parameters.getSetOfTardyTimes(lastTask)){
                 double tardinessPenalty = getTardinessPenalty(lastTask, t);
 
                 GRBVar var = variables.getZ().get(lastTask).get(t);
@@ -56,19 +56,10 @@ public class Objective {
         return robustnessPenalty;
     }
 
-    private static double getTardinessPenalty(Task lastTask, int t){
+    private static double getTardinessPenalty(Task lastTask, int t) {
         double tardinessAmount = t + lastTask.getDiscretizedProcessingTime() - lastTask.getJobWhichBelongs().getDeadline();
 
         return Math.pow(tardinessAmount, 2);
-    }
-    private static List<Integer> getSetOfTardyTimes(Parameters parameters, Task i){
-        List<Integer> setOfTardyPoints = new ArrayList<>();
-        for(int t = (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime()) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime() + 1) : 0;
-        t <= parameters.getFinalTimePoint(); t++){
-            setOfTardyPoints.add(t);
-        }
-
-        return setOfTardyPoints;
     }
 
 }
