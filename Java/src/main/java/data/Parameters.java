@@ -18,8 +18,8 @@ public class Parameters {
     private ArrayList<Machine> setOfMachines;
     private int finalTimePoint = 1000;
     private double alphaCompletionTime = 1;
-    private double alphaRobust = 1;
-    private double alphaTardiness = 1;
+    private double alphaRobust = 0.1;
+    private double alphaTardiness = 10;
 
     public Parameters(){
         this.setOfJobs = new ArrayList<>();
@@ -54,10 +54,10 @@ public class Parameters {
                     priority = 1;
                     break;
                 case "MEDIUM":
-                    priority = 2;
+                    priority = 4;
                     break;
                 case "HIGH":
-                    priority = 3;
+                    priority = 16;
                     break;
                 default:
                     throw new Exception("Invalid priority definition");

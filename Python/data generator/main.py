@@ -5,15 +5,18 @@ from task import Task
 import numpy as np
 
 
-def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, processing_mean, processing_std):
+def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, processing_mean, processing_std,
+                             deadline_factor, deadline_std_factor):
     list_of_machines = [Machine(id=machine_id, machine_name="").__dict__ for machine_id in range(1, n_machine + 1)]
     list_of_jobs = [Job(priority="LOW", deadline=0, tasks=[], id=i) for i in range(1, n_job + 1)]
 
     unique_task_id = 1
     for job in list_of_jobs:
         list_of_tasks = []
+
         processing_time = np.round(np.random.normal(processing_mean, processing_std))
         processing_time = processing_time if processing_time > 1 else 1
+
         list_of_tasks.append(Task(id=unique_task_id, processing_time=processing_time,
                                   assigned_machine=np.random.choice(list_of_machines)["id"],
                                   preceding_task=-1, succeeding_task=unique_task_id + 1, schedule=-1))
@@ -38,6 +41,13 @@ def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, proc
 
         job.tasks = list_of_tasks
 
+        deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
+        deadline_std = deadline_mean * deadline_std_factor
+        deadline = np.round(np.random.normal(deadline_mean, deadline_std))
+
+        job.deadline = deadline
+
+
     list_of_jobs = [job.json_encoded() for job in list_of_jobs]
 
     scenario = {}
@@ -48,7 +58,9 @@ def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, proc
 
 
 if __name__ == "__main__":
-    scenario = generate_random_scenario(n_machine=4, n_job=10, possible_task_numbers=[3, 4, 5], processing_mean=10, processing_std=4)
+    scenario = generate_random_scenario(n_machine=4, n_job=10, possible_task_numbers=[3, 4, 5],
+                                        processing_mean=10, processing_std=4,
+                                        deadline_factor=2.5, deadline_std_factor=0.1)
 
-    with open("scenario.json", "w") as f:
+    with open("../../Java/input/scenario.json", "w") as f:
         json.dump(scenario, f)

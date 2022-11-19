@@ -13,12 +13,12 @@ import java.util.List;
 public class main {
     public static void main(String[] args) throws Exception {
         Parameters parameters = new Parameters();
-        parameters.readData("scenario.json");
+        parameters.readData("input/scenario.json");
 
         Model model = new Model(parameters);
         model.create();
-        model.optimize(10, false);
-        model.writeSolution("scenario.json", "new_scenario.json");
+        model.optimize(300, false);
+        model.writeSolution("input/scenario.json", "output/new_scenario.json");
         model.dispose();
     }
 
