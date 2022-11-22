@@ -1,0 +1,182 @@
+[
+    {
+        "scenarioPath": "input/computational_runs/scenario_0_5_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_0_5_03_03_03.json",
+        "cpuTime": 1.8046700954437256,
+        "objective": 3548.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_0_10_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_0_10_03_03_03.json",
+        "cpuTime": 600.0106730461121,
+        "objective": 41699.0,
+        "totalTardiness": 33.0,
+        "totalDeviation": 0.0,
+        "gap": 0.22209165687426558
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_0_15_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_0_15_03_03_03.json",
+        "cpuTime": 600.0100841522217,
+        "objective": 462366.0,
+        "totalTardiness": 321.0,
+        "totalDeviation": 0.0,
+        "gap": 0.25548303885848533
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_0_20_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_0_20_03_03_03.json",
+        "cpuTime": 600,
+        "objective": -1.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": -1.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_1_5_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_1_5_03_03_03.json",
+        "cpuTime": 0.9210448265075684,
+        "objective": 2424.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_1_10_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_1_10_03_03_03.json",
+        "cpuTime": 600.0089120864868,
+        "objective": 8477.0,
+        "totalTardiness": -11.0,
+        "totalDeviation": 0.0,
+        "gap": 0.24654948684676184
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_1_15_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_1_15_03_03_03.json",
+        "cpuTime": 600.00963306427,
+        "objective": 252495.0,
+        "totalTardiness": 298.0,
+        "totalDeviation": 0.0,
+        "gap": 0.44706733300148127
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_1_20_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_1_20_03_03_03.json",
+        "cpuTime": 600.0078821182251,
+        "objective": -1.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": -1.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_2_5_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_2_5_03_03_03.json",
+        "cpuTime": 0.35161495208740234,
+        "objective": 2548.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_2_10_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_2_10_03_03_03.json",
+        "cpuTime": 523.5989608764648,
+        "objective": 14353.000000009895,
+        "totalTardiness": 16.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_2_15_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_2_15_03_03_03.json",
+        "cpuTime": 600.0075271129608,
+        "objective": 447222.0,
+        "totalTardiness": 352.0,
+        "totalDeviation": 0.0,
+        "gap": 0.2788981628772444
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_2_20_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_2_20_03_03_03.json",
+        "cpuTime": 600.0116720199585,
+        "objective": -1.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": -1.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_3_5_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_3_5_03_03_03.json",
+        "cpuTime": 3.3089418411254883,
+        "objective": 2728.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_3_10_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_3_10_03_03_03.json",
+        "cpuTime": 506.2352521419525,
+        "objective": 7272.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_3_15_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_3_15_03_03_03.json",
+        "cpuTime": 600.0219581127167,
+        "objective": 186128.0,
+        "totalTardiness": 222.0,
+        "totalDeviation": 0.0,
+        "gap": 0.6205331966118393
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_3_20_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_3_20_03_03_03.json",
+        "cpuTime": 600.0099852085114,
+        "objective": -1.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": -1.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_4_5_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_4_5_03_03_03.json",
+        "cpuTime": 0.42331600189208984,
+        "objective": 3000.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_4_10_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_4_10_03_03_03.json",
+        "cpuTime": 119.75217199325562,
+        "objective": 17685.0,
+        "totalTardiness": 16.0,
+        "totalDeviation": 0.0,
+        "gap": 0.0
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_4_15_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_4_15_03_03_03.json",
+        "cpuTime": 600.0037860870361,
+        "objective": 428869.0,
+        "totalTardiness": 410.0,
+        "totalDeviation": 0.0,
+        "gap": 0.5693349208130724
+    },
+    {
+        "scenarioPath": "input/computational_runs/scenario_4_20_03_03_03.json",
+        "outputScenario": "output/computational_runs_1/scenario_4_20_03_03_03.json",
+        "cpuTime": 600.0069770812988,
+        "objective": -1.0,
+        "totalTardiness": 0.0,
+        "totalDeviation": 0.0,
+        "gap": -1.0
+    }
+]

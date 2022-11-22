@@ -24,7 +24,6 @@ public class Model {
         this.env = new GRBEnv();
         this.model = new GRBModel(env);
         this.parameters = parameters;
-
     }
 
     public void create() throws GRBException {
@@ -45,7 +44,6 @@ public class Model {
     }
 
     public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {
-        writeSolutionToCsv("Solution.csv", this.variables);
         ScenarioUpdater.updateScenario(inputPath, outputPath, this.parameters, this.variables);
     }
 
@@ -67,26 +65,18 @@ public class Model {
         }
     }
 
-    private void writeSolutionToCsv(String filePath, Variables variables) throws FileNotFoundException, GRBException {
-        PrintWriter out = new PrintWriter(filePath);
-        out.println("Job,Task,Machine,Time,Processing_time");
-        for(Task i : variables.getZ().keySet()){
-            for(int t : variables.getZ().get(i).keySet()){
-                GRBVar var = variables.getZ().get(i).get(t);
-                double val = var.get(GRB.DoubleAttr.X);
-                if(val > 0.5){
-                    out.println(String.format("%d,%d,%d,%d,%d",i.getJobWhichBelongs().getId(),i.getId(), i.getAssignedMachine().getId(),t,i.getDiscretizedProcessingTime()));
-                }
-            }
-        }
-        out.close();
-    }
-
     public GRBModel getModel() {
         return model;
     }
 
     public Variables getVariables() {
         return variables;
+    }
+
+    public boolean isSolutionFound() throws GRBException {
+        if(this.model.get(GRB.IntAttr.SolCount) > 0)
+            return true;
+        else
+            return false;
     }
 }

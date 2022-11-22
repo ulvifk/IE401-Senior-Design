@@ -16,15 +16,18 @@ public class Parameters {
     private ArrayList<Job> setOfJobs;
     private ArrayList<Task> setOfTasks;
     private ArrayList<Machine> setOfMachines;
-    private int finalTimePoint = 1000;
+    public int finalTimePoint = 250;
     private double alphaCompletionTime = 1;
-    private double alphaRobust = 0.1;
     private double alphaTardiness = 10;
+    private double alphaRobust = 0.1;
+
+    private int timeWindowLength = 1;
 
     public Parameters(){
         this.setOfJobs = new ArrayList<>();
         this.setOfTasks = new ArrayList<>();
         this.setOfMachines = new ArrayList<>();
+        this.finalTimePoint = getRoundUpToClosestFactor(this.finalTimePoint);
     }
     public void readData(String jsonPath) throws Exception {
         FileReader reader = new FileReader(jsonPath);
@@ -47,7 +50,7 @@ public class Parameters {
             Job job = new Job();
 
             job.setId(jobObject.get("id").getAsInt());
-            job.setDeadline(jobObject.get("deadline").getAsInt());
+            job.setDeadline(getRoundDownToClosestFactor(jobObject.get("deadline").getAsInt()));
             double priority;
             switch (jobObject.get("priority").getAsString()){
                 case "LOW":
@@ -73,7 +76,8 @@ public class Parameters {
                 Task task = new Task();
                 task.setId(taskObject.get("id").getAsInt());
                 task.setPriority(priority);
-                task.setDiscretizedProcessingTime(taskObject.get("processing_time").getAsInt());
+                task.setProcessingTime(taskObject.get("processing_time").getAsInt());
+                task.setDiscretizedProcessingTime(getRoundUpToClosestFactor(task.getProcessingTime()));
                 task.setJobWhichBelongs(job);
                 task.setPrecedingTaskId(taskObject.get("preceding_task").getAsInt());
                 task.setSucceedingTaskId(taskObject.get("succeeding_task").getAsInt());
@@ -114,6 +118,14 @@ public class Parameters {
             setOfTardyPoints.add(t);
         }
         return setOfTardyPoints;
+    }
+
+    public int getRoundUpToClosestFactor(double val){
+        return (int) (Math.ceil(val / (double) this.timeWindowLength));
+    }
+
+    public int getRoundDownToClosestFactor(double val){
+        return (int) (Math.floor(val / (double) this.timeWindowLength) );
     }
 
     public ArrayList<Job> getSetOfJobs() {

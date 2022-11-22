@@ -17,6 +17,7 @@ public class Objective {
     public static void setObjective(GRBModel model, Parameters parameters, Variables variables) throws GRBException {
         GRBLinExpr obj = new GRBLinExpr();
         for(Job job : parameters.getSetOfJobs()){
+            if(job.getTasks().size() == 0) continue;
             Task lastTask = job.getTasks().get(job.getTasks().size()-1);
             for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
                 int completionTime = t + lastTask.getDiscretizedProcessingTime();
@@ -28,6 +29,7 @@ public class Objective {
         }
 
         for(Job job : parameters.getSetOfJobs()){
+            if(job.getTasks().size() == 0) continue;
             Task lastTask = job.getTasks().get(job.getTasks().size()-1);
             for(int t : parameters.getSetOfTardyTimes(lastTask)){
                 double tardinessPenalty = getTardinessPenalty(lastTask, t);
@@ -51,7 +53,7 @@ public class Objective {
 
     private static double getRobustnessPenalty(Task lastTask, int t){
         int oldScheduleTime = lastTask.getOldScheduleTime() != -1 ? lastTask.getOldScheduleTime() : t;
-        double robustnessPenalty = Math.pow(oldScheduleTime, 2) * Math.pow((oldScheduleTime - t), 2);
+        double robustnessPenalty = Math.pow((oldScheduleTime - t), 2);
 
         return robustnessPenalty;
     }
@@ -59,7 +61,7 @@ public class Objective {
     private static double getTardinessPenalty(Task lastTask, int t) {
         double tardinessAmount = t + lastTask.getDiscretizedProcessingTime() - lastTask.getJobWhichBelongs().getDeadline();
 
-        return Math.pow(tardinessAmount, 2);
+        return Math.pow(lastTask.getPriority() *tardinessAmount, 2);
     }
 
 }

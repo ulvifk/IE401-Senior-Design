@@ -1,0 +1,1 @@
+[{"scenarioPath":"input/scenario_5.json","outputScenario":"output/scenario_5.json","cpuTime":6.219423055648804,"objective":341.0,"totalTardiness":0.0,"totalDeviation":0.0,"gap":0.0},{"scenarioPath":"input/scenario_10.json","outputScenario":"output/scenario_10.json","cpuTime":1453.7499430179596,"objective":951.0,"totalTardiness":0.0,"totalDeviation":0.0,"gap":0.05362776025236593}]
