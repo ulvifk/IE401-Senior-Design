@@ -21,7 +21,7 @@ public class Parameters {
     private double alphaTardiness = 10;
     private double alphaRobust = 0.1;
 
-    private int timeWindowLength = 1;
+    private int timeWindowLength = 5;
 
     public Parameters(){
         this.setOfJobs = new ArrayList<>();

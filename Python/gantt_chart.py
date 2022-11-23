@@ -1,6 +1,9 @@
+import sys
+import warnings
+warnings.filterwarnings("ignore")
+
 import matplotlib.axes
 from matplotlib.figure import Figure
-from matplotlib.axes import Axes
 import pandas as pd
 import json
 import matplotlib.pyplot as plt
@@ -57,20 +60,23 @@ def create_gantt_chart(ax: matplotlib.axes.Axes, fig: matplotlib.figure.Figure, 
     if(is_save):
         fig.savefig(save_path)
 
-    fig.show()
+    plt.show(block=True)
+
 
 if __name__ == "__main__":
-    plt.style.use("seaborn")
+    plt.style.use("seaborn-v0_8")
+    plt.ion()
 
-    normal = "../Java/output/computational_runs_1/scenario_1_10_03_03_03.json"
-    shifted = "../Java/input/robustness/shifted_scenario_20.json"
-    solved_shifted = "../Java/output/robustness/shifted_scenario_20.json"
-    with open(solved_shifted, "r") as f:
+    file_path = "../Java/output/scenario.json"
+    if len(sys.argv) > 0:
+        file_path = sys.argv[0]
+
+    with open("../Java/output/scenario.json", "r") as f:
         scenario = json.load(f)
     machine_list = scenario["machines"]
     job_list = scenario["jobs"]
 
-    save_path = "../Java/output/robustness/shifted_gantt_20.png"
+    save_path = "../Java/output/robustness/scenario_gantt.png"
 
     fig, ax = plt.subplots()
-    create_gantt_chart(ax, fig, job_list, machine_list, is_save=True, save_path=save_path)
+    create_gantt_chart(ax, fig, job_list, machine_list, is_save=False, save_path=save_path)

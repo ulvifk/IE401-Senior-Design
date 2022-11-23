@@ -16,26 +16,19 @@ import java.util.List;
 
 public class main {
     public static void main(String[] args) throws Exception {
+        String inputPath = "input/scenario.json";
+        String outputPath = "output/scenario.json";
 
-        List<String> inputs = new ArrayList<>();
-        List<String> outputs = new ArrayList<>();
+        Parameters parameters = new Parameters();
+        parameters.readData(inputPath);
 
-        Integer[] n_jobs = new Integer[] {10};
-        Integer[] seeds = new Integer[] {1};
+        Model model = new Model(parameters);
+        model.create();
+        model.optimize(600, false);
 
-        for(Integer seed : seeds) {
-            for (Integer n_job : n_jobs) {
-                inputs.add(String.format("input/robustness/shifted_scenario_20.json", seed, n_job));
-                outputs.add(String.format("output/robustness/shifted_scenario_20.json", seed, n_job));
-            }
+        if(model.isSolutionFound()){
+            model.writeSolution(inputPath, outputPath);
         }
-
-        for(String path : inputs){
-            FileReader reader = new FileReader(path);
-            reader.close();
-        }
-
-        runTests(inputs, outputs);
     }
 
     private static void runTests(List<String> inputPaths, List<String> outputPaths) throws Exception {
