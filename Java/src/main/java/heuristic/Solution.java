@@ -13,4 +13,16 @@ public class Solution {
         this.machine = machine;
         this.startTime = startTime;
     }
+
+    public Task getTask() {
+        return task;
+    }
+
+    public Machine getMachine() {
+        return machine;
+    }
+
+    public double getStartTime() {
+        return startTime;
+    }
 }

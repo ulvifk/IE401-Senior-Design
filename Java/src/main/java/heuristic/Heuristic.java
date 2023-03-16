@@ -1,14 +1,24 @@
 package heuristic;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import data.Job;
 import data.Machine;
 import data.Parameters;
 import data.Task;
+import gurobi.GRBException;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.PrintWriter;
 import java.util.*;
 
 public class Heuristic {
     private final Parameters parameters;
     private final List<Task> unscheduledTasks;
+    private final List<Machine> M;
     private final List<Task> H;
     private final List<Task> C;
     private final List<Task> D;
@@ -23,6 +33,7 @@ public class Heuristic {
         this.C = new LinkedList<>();
         this.D = new LinkedList<>();
         this.W = new LinkedList<>(parameters.getSetOfMachines());
+        this.M = new LinkedList<>(parameters.getSetOfMachines());
 
         this.I = new HashMap<>();
         for (Machine machine : parameters.getSetOfMachines()) {
@@ -35,8 +46,10 @@ public class Heuristic {
     private void updateD(){
         D.clear();
         for (Task task : unscheduledTasks) {
-            if (this.H.contains(task.getPrecedingTask()) || task.getPrecedingTask() == null) {
-                D.add(task);
+            if (this.C.contains(task.getPrecedingTask()) || task.getPrecedingTask() == null) {
+                if (task.getMachinesCanUndertake().stream().anyMatch(this.W::contains)) {
+                    D.add(task);
+                }
             }
         }
     }
@@ -48,7 +61,6 @@ public class Heuristic {
                 newMachineList.add(machine);
             }
         }
-
         return newMachineList;
     }
 
@@ -99,11 +111,31 @@ public class Heuristic {
         return new Pair<>(bestTask, bestMachine);
     }
 
+    private void removeRedundantMachines(){
+        ListIterator<Machine> iterator = this.M.listIterator();
+        whileLoop:
+        while (iterator.hasNext()){
+            Machine machine = iterator.next();
+            for (Task task : machine.getSetOfAssignedTasks()){
+                if (this.unscheduledTasks.contains(task)){
+                    continue whileLoop;
+                }
+            }
+            System.out.println("Removing machine: " + machine.getId());
+
+            iterator.remove();
+            this.I.remove(machine);
+            this.W.remove(machine);
+        }
+    }
+
     public void optimize(){
+        System.out.println("Heuristic started...");
+
         double t = 0;
+        this.updateD();
 
         while (this.unscheduledTasks.size() > 0){
-            this.updateD();
 
             Machine machine;
             Task task;
@@ -112,26 +144,37 @@ public class Heuristic {
                 task = this.D.stream().filter(
                         ts -> ts.getMachinesCanUndertake().contains(machine)).
                         min(Comparator.comparing(Task::getProcessingTime)).orElse(null);
+
+                if (task == null){
+                    int x = 0;
+                }
             }
             else{
                 Pair<Task, Machine> bestTaskAndMachine = this.findBestTaskAndMachine();
                 task = bestTaskAndMachine.first;
                 machine = bestTaskAndMachine.second;
             }
-            t = this.I.get(machine);
-            Solution solution = new Solution(task, machine, t);
-            this.solutions.put(task, solution);
+
+            this.unscheduledTasks.remove(task);
             this.H.add(task);
+            this.I.replace(machine, t + task.getProcessingTime() * machine.getProcessingTimeConstant());
+            this.removeRedundantMachines();
+
+            Solution solution = new Solution(task, machine, t);
+            System.out.println(String.format("Task %d scheduled on machine %d to time %f",
+                    task.getId(), machine.getId(), t));
+            this.solutions.put(task, solution);
+
             t = this.findT(this.W);
             if (t == -1){
                 throw new RuntimeException("t is -1");
             }
 
-            this.W = this.updateW(t, this.parameters.getSetOfMachines());
+            this.W = this.updateW(t, this.M);
             this.updateC(t);
             this.updateD();
-            while (this.D.size() == 0){
-                List<Machine> mPrime = this.parameters.getSetOfMachines().stream().filter(mac -> !this.W.contains(mac)).toList();
+            while (this.D.size() == 0 && this.unscheduledTasks.size() > 0){
+                List<Machine> mPrime = this.M.stream().filter(mac -> !this.W.contains(mac)).toList();
                 t = this.findT(mPrime);
                 List<Machine> wPrime = this.updateW(t, mPrime);
                 for (Machine mac : wPrime){
@@ -143,5 +186,39 @@ public class Heuristic {
                 this.updateD();
             }
         }
+    }
+
+    public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {
+        FileReader reader = new FileReader(inputPath);
+        JsonElement jsonElement = JsonParser.parseReader(reader);
+        JsonObject jsonObject = jsonElement.getAsJsonObject();
+
+        JsonArray jobsArray = jsonObject.getAsJsonArray("jobs");
+
+        for(JsonElement jobElement : jobsArray){
+            JsonObject jobObject = jobElement.getAsJsonObject();
+            int jobId = jobObject.get("id").getAsInt();
+            Job job = parameters.getSetOfJobs().stream().filter(job1 -> job1.getId() == jobId).findAny().orElse(null);
+
+            JsonArray taskArray = jobObject.getAsJsonArray("tasks");
+            for(JsonElement taskElement : taskArray){
+                JsonObject taskObject = taskElement.getAsJsonObject();
+                int taskId = taskObject.get("id").getAsInt();
+
+                Task task = job.getTasks().stream().filter(task1 -> task1.getId() == taskId).findAny().orElse(null);
+                Solution solution = this.solutions.get(task);
+
+                taskObject.remove("scheduled_time");
+                taskObject.addProperty("scheduled_time", solution.startTime);
+
+                taskObject.remove("scheduled_machine");
+                taskObject.addProperty("scheduled_machine", solution.machine.getId());
+            }
+        }
+
+        String scenario = jsonObject.toString();
+        PrintWriter out = new PrintWriter(outputPath);
+        out.println(scenario);
+        out.close();
     }
 }

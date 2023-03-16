@@ -2,6 +2,9 @@ import data.Job;
 import data.Machine;
 import data.Parameters;
 import data.Task;
+import gurobi.GRB;
+import gurobi.GRBException;
+import gurobi.GRBVar;
 import heuristic.Heuristic;
 import kpi.Kpi;
 import model.Model;
@@ -32,6 +35,7 @@ public class main {
 
             Heuristic heuristic = new Heuristic(parameters);
             heuristic.optimize();
+            heuristic.writeSolution(input, outputs.get(inputs.indexOf(input)));
         }
 
         /*
@@ -80,7 +84,7 @@ public class main {
 
     }
 
-    private static Kpi generateKPI(String input, String output, Model model, Parameters parameters) throws GRBException {
+    private static Kpi generateKPI(String input, String output, Model model, Parameters parameters) throws GRBException, GRBException {
         Kpi kpi = new Kpi();
         kpi.cpuTime = model.getModel().get(GRB.DoubleAttr.Runtime);
         kpi.objective = model.isSolutionFound() ? model.getModel().get(GRB.DoubleAttr.ObjVal): -1;
