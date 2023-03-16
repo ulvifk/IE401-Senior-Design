@@ -32,6 +32,8 @@ public class ScenarioUpdater {
 
         testPrint(parameters, variables);
         Map<Task, Double> startTimes = getStartTime(parameters, variables);
+        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
+
         for(JsonElement jobElement : jobsArray){
             JsonObject jobObject = jobElement.getAsJsonObject();
             int jobId = jobObject.get("id").getAsInt();
@@ -44,8 +46,11 @@ public class ScenarioUpdater {
 
                 Task task = job.getTasks().stream().filter(task1 -> task1.getId() == taskId).findAny().orElse(null);
 
-                taskObject.remove("schedule");
-                taskObject.addProperty("schedule", startTimes.get(task));
+                taskObject.remove("scheduled_time");
+                taskObject.addProperty("scheduled_time", startTimes.get(task));
+
+                taskObject.remove("scheduled_machine");
+                taskObject.addProperty("scheduled_machine", machineMap.get(task).getId());
             }
         }
 
@@ -59,11 +64,27 @@ public class ScenarioUpdater {
         Machine machine = parameters.getSetOfMachines().get(0);
         for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
             for(Task i : machine.getSetOfAssignedTasks()){
-                if(variables.getZ().get(i).get(t).get(GRB.DoubleAttr.X) > 0.5){
-                    System.out.println(String.format("Task_%d, Time_%d", i.getId(), t));
+                for (Machine k : i.getMachinesCanUndertake()) {
+                    if (variables.getZ().get(i).get(k).get(t).get(GRB.DoubleAttr.X) > 0.5) {
+                        System.out.printf("Task_%d, Time_%d%n", i.getId(), t);
+                    }
                 }
             }
         }
+    }
+
+    private static Map<Task, Machine> getMachineMap(Parameters parameters, Variables variables) throws GRBException {
+        Map<Task, Machine> machineMap = new HashMap<>();
+        for (Task i : parameters.getSetOfTasks()) {
+            for (Machine k : i.getMachinesCanUndertake()) {
+                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
+                    if (variables.getZ().get(i).get(k).get(t).get(GRB.DoubleAttr.X) > 0.5) {
+                        machineMap.put(i, k);
+                    }
+                }
+            }
+        }
+        return machineMap;
     }
 
     private static Map<Task, Double> getStartTime(Parameters parameters, Variables variables) throws GRBException {
@@ -95,18 +116,22 @@ public class ScenarioUpdater {
 
     private static Task getBeforeTask(Task task, Variables variables) throws GRBException {
         int assignedTime = 0;
-        for(int t : variables.getZ().get(task).keySet()){
-            GRBVar z = variables.getZ().get(task).get(t);
-            if(z.get(GRB.DoubleAttr.X) > 0.5){
-                assignedTime = t;
+        Machine assignedMachine = null;
+        for (Machine k : task.getMachinesCanUndertake()) {
+            for (int t : variables.getZ().get(task).get(k).keySet()) {
+                GRBVar z = variables.getZ().get(task).get(k).get(t);
+                if (z.get(GRB.DoubleAttr.X) > 0.5) {
+                    assignedTime = t;
+                    assignedMachine = k;
+                }
             }
         }
 
         if(assignedTime == 0) return null;
 
         for(int t = assignedTime-1; t>=0; t--){
-            for(Task i : task.getAssignedMachine().getSetOfAssignedTasks()){
-                GRBVar z = variables.getZ().get(i).get(t);
+            for(Task i : assignedMachine.getSetOfAssignedTasks()){
+                GRBVar z = variables.getZ().get(i).get(assignedMachine).get(t);
                 if(z.get(GRB.DoubleAttr.X) > 0.5){
                     return i;
                 }

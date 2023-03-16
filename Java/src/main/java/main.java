@@ -1,5 +1,5 @@
-import com.google.gson.Gson;
 import data.Job;
+import data.Machine;
 import data.Parameters;
 import data.Task;
 import gurobi.GRB;
@@ -7,10 +7,8 @@ import gurobi.GRBException;
 import gurobi.GRBVar;
 import kpi.Kpi;
 import model.Model;
-import output.ScenarioUpdater;
 
 import java.io.FileReader;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,13 +18,13 @@ public class main {
         List<String> inputs = new ArrayList<>();
         List<String> outputs = new ArrayList<>();
 
-        Integer[] n_jobs = new Integer[] {10};
-        Integer[] seeds = new Integer[] {1};
+        Integer[] n_jobs = new Integer[] {5, 10, 15};
+        Integer[] seeds = new Integer[] {0};
 
         for(Integer seed : seeds) {
             for (Integer n_job : n_jobs) {
-                inputs.add(String.format("input/robustness/shifted_scenario_20.json", seed, n_job));
-                outputs.add(String.format("output/robustness/shifted_scenario_20.json", seed, n_job));
+                inputs.add(String.format("input/scenario_%d_%d_03_03_03.json", seed, n_job));
+                outputs.add(String.format("output/scenario_%d_%d_03_03_03.json", seed, n_job));
             }
         }
 
@@ -57,17 +55,20 @@ public class main {
             }
             if(model.isSolutionFound()){
                 model.writeSolution(inputPaths.get(i), outputPaths.get(i));
+                model.printSolution("output/gurobi_solution.json");
             }
 
             Kpi kpi = generateKPI(inputPaths.get(i), outputPaths.get(i), model, parameters);
             kpis.add(kpi);
             model.dispose();
         }
-
+/*
         String json = new Gson().toJson(kpis);
         PrintWriter out = new PrintWriter("output/robustness/kpis_shifted_20.json");
         out.println(json);
         out.close();
+        */
+
     }
 
     private static Kpi generateKPI(String input, String output, Model model, Parameters parameters) throws GRBException {
@@ -83,10 +84,12 @@ public class main {
             for (Job job : parameters.getSetOfJobs()) {
                 if(job.getTasks().size() == 0) continue;
                 Task lastTask = job.getTasks().get(job.getTasks().size() - 1);
-                for (int t : parameters.getSetOfTardyTimes(lastTask)) {
-                    GRBVar var = model.getVariables().getZ().get(lastTask).get(t);
-                    if (var.get(GRB.DoubleAttr.X) > 0.5) {
-                        kpi.totalTardiness += t - job.getDeadline();
+                for (Machine k : lastTask.getMachinesCanUndertake()) {
+                    for (int t : parameters.getSetOfTardyTimes(lastTask)) {
+                        GRBVar var = model.getVariables().getZ().get(lastTask).get(k).get(t);
+                        if (var.get(GRB.DoubleAttr.X) > 0.5) {
+                            kpi.totalTardiness += t - job.getDeadline();
+                        }
                     }
                 }
             }

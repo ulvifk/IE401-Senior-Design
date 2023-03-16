@@ -1,12 +1,10 @@
 package model;
 
 import data.Parameters;
-import data.Task;
 import gurobi.GRB;
 import gurobi.GRBEnv;
 import gurobi.GRBException;
 import gurobi.GRBModel;
-import gurobi.GRBVar;
 import output.ScenarioUpdater;
 
 import java.io.FileNotFoundException;
@@ -52,17 +50,10 @@ public class Model {
         this.model.dispose();
     }
 
-    private void printSolution(Variables variables) throws GRBException {
-        for(Task i : variables.getZ().keySet()){
-            for(int t : variables.getZ().get(i).keySet()){
-                GRBVar var = variables.getZ().get(i).get(t);
-                double val = var.get(GRB.DoubleAttr.X);
-
-                if(val > 0.5){
-                    System.out.println(var.get(GRB.StringAttr.VarName));
-                }
-            }
-        }
+    public void printSolution(String path) throws GRBException, FileNotFoundException {
+        PrintWriter out = new PrintWriter(path);
+        out.println(this.model.getJSONSolution());
+        out.close();
     }
 
     public GRBModel getModel() {
@@ -74,9 +65,6 @@ public class Model {
     }
 
     public boolean isSolutionFound() throws GRBException {
-        if(this.model.get(GRB.IntAttr.SolCount) > 0)
-            return true;
-        else
-            return false;
+        return this.model.get(GRB.IntAttr.SolCount) > 0;
     }
 }

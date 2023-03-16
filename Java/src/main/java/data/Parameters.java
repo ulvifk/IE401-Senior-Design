@@ -5,23 +5,20 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import javax.crypto.Mac;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class Parameters {
-    private ArrayList<Job> setOfJobs;
-    private ArrayList<Task> setOfTasks;
-    private ArrayList<Machine> setOfMachines;
+    private final ArrayList<Job> setOfJobs;
+    private final ArrayList<Task> setOfTasks;
+    private final ArrayList<Machine> setOfMachines;
     public int finalTimePoint = 250;
-    private double alphaCompletionTime = 1;
-    private double alphaTardiness = 10;
-    private double alphaRobust = 0.1;
+    private final double alphaCompletionTime = 1;
+    private final double alphaTardiness = 10;
+    private final double alphaRobust = 0.1;
 
-    private int timeWindowLength = 1;
+    private final int timeWindowLength = 1;
 
     public Parameters(){
         this.setOfJobs = new ArrayList<>();
@@ -39,65 +36,69 @@ public class Parameters {
 
         for (JsonElement machineElement : machinesArray) {
             JsonObject machineObject = machineElement.getAsJsonObject();
-            Machine machine = new Machine();
-            machine.setId(machineObject.get("id").getAsInt());
+
+            int id = machineObject.get("id").getAsInt();
+            double processingTime = machineObject.get("processing_time_constant").getAsDouble();
+            String type = machineObject.get("task_type_undertakes").getAsString();
+            Machine machine = new Machine(id, processingTime, type);
 
             this.setOfMachines.add(machine);
         }
 
         for (JsonElement jobElement : jobsArray) {
             JsonObject jobObject = jobElement.getAsJsonObject();
-            Job job = new Job();
 
-            job.setId(jobObject.get("id").getAsInt());
-            job.setDeadline(getRoundDownToClosestFactor(jobObject.get("deadline").getAsInt()));
-            double priority;
-            switch (jobObject.get("priority").getAsString()){
-                case "LOW":
-                    priority = 1;
-                    break;
-                case "MEDIUM":
-                    priority = 4;
-                    break;
-                case "HIGH":
-                    priority = 16;
-                    break;
-                default:
-                    throw new Exception("Invalid priority definition");
-            }
+            int id = jobObject.get("id").getAsInt();
+            int deadline = jobObject.get("deadline").getAsInt();
 
-            job.setPriority(priority);
+            double priority = switch (jobObject.get("priority").getAsString()) {
+                case "LOW" -> 1;
+                case "MEDIUM" -> 4;
+                case "HIGH" -> 16;
+                default -> throw new Exception("Invalid priority definition");
+            };
+
+            Job job = new Job(id, deadline, priority);
             ArrayList<Task> taskList = new ArrayList<>();
 
             JsonArray tasksArray = jobObject.getAsJsonArray("tasks");
             for(JsonElement taskElement : tasksArray){
                 JsonObject taskObject = taskElement.getAsJsonObject();
 
-                Task task = new Task();
-                task.setId(taskObject.get("id").getAsInt());
-                task.setPriority(priority);
-                task.setProcessingTime(taskObject.get("processing_time").getAsInt());
-                task.setDiscretizedProcessingTime(getRoundUpToClosestFactor(task.getProcessingTime()));
-                task.setJobWhichBelongs(job);
-                task.setPrecedingTaskId(taskObject.get("preceding_task").getAsInt());
-                task.setSucceedingTaskId(taskObject.get("succeeding_task").getAsInt());
-                task.setOldScheduleTime(taskObject.get("schedule").getAsInt());
+                int taskId = taskObject.get("id").getAsInt();
+                String type = taskObject.get("type").getAsString();
+                double processingTime = taskObject.get("processing_time").getAsDouble();
+                int discretizedProcessingTime = getRoundUpToClosestFactor(processingTime);
+                JsonArray machinesCanUnderTakeJsonArr = taskObject.get("machines_can_undertake").getAsJsonArray();
+                ArrayList<Integer> machinesCanUndertake = new ArrayList<>();
+                for(JsonElement machineId : machinesCanUnderTakeJsonArr){
+                    machinesCanUndertake.add(machineId.getAsInt());
+                }
+                int predecessorId = taskObject.get("preceding_task").getAsInt();
+                int successorId = taskObject.get("succeeding_task").getAsInt();
+                int oldScheduledTime = taskObject.get("scheduled_time").getAsInt();
+                int oldScheduledMachineId = taskObject.get("scheduled_machine").getAsInt();
+                Machine oldScheduledMachine = this.setOfMachines.stream().filter(m -> m.getId() == oldScheduledMachineId).findFirst().orElse(null);
+                if (oldScheduledMachine == null && oldScheduledMachineId != -1){
+                    throw new Exception("Invalid old scheduled machine id");
+                }
 
-                int machineId = taskObject.get("assigned_machine").getAsInt();
-                Machine machine = this.setOfMachines.stream().filter(m -> m.getId() == machineId).findAny().orElse(null);
-                if(machine == null){
+                Task task = new Task(taskId, processingTime, discretizedProcessingTime, predecessorId, successorId, job, priority, oldScheduledTime, oldScheduledMachine);
+
+                List<Machine> machinesList = this.setOfMachines.stream().filter(m -> m.getType().equals(type)).toList();
+                if(machinesCanUndertake.size() == 0){
                     throw new Exception("A task is not assigned to any machine");
                 }
 
-                machine.getSetOfAssignedTasks().add(task);
-                task.setAssignedMachine(machine);
-
+                machinesList.forEach(m -> {
+                    m.addTask(task);
+                    task.addMachineCanUnderTake(m);
+                });
 
                 taskList.add(task);
                 this.setOfTasks.add(task);
+                job.addTask(task);
             }
-
-            job.setTasks(taskList);
             this.setOfJobs.add(job);
         }
 

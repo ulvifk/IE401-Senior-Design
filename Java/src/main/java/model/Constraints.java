@@ -22,9 +22,11 @@ public class Constraints {
     private static void setAssignOnceConstraint(GRBModel model, Variables variables, Parameters parameters) throws GRBException {
         for(Task i : parameters.getSetOfTasks()){
             GRBLinExpr lhs = new GRBLinExpr();
-            for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
-                GRBVar z = variables.getZ().get(i).get(t);
-                lhs.addTerm(1, z);
+            for (Machine machine : i.getMachinesCanUndertake()) {
+                for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
+                    GRBVar z = variables.getZ().get(i).get(machine).get(t);
+                    lhs.addTerm(1, z);
+                }
             }
 
             model.addConstr(lhs, GRB.EQUAL, 1, "Task_%d_only_once_assignment_cons");
@@ -38,7 +40,7 @@ public class Constraints {
                 for(Task i : k.getSetOfAssignedTasks()){
                     ArrayList<Integer> setOfTBar = getSetOfTBar(i, t);
                     for(Integer tBar : setOfTBar){
-                        GRBVar var = variables.getZ().get(i).get(tBar);
+                        GRBVar var = variables.getZ().get(i).get(k).get(tBar);
                         lhs.addTerm(1, var);
                     }
                 }
@@ -54,17 +56,20 @@ public class Constraints {
             Task l = i.getSucceedingTask();
 
             GRBLinExpr lhs = new GRBLinExpr();
-            for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
-                GRBVar var = variables.getZ().get(i).get(t);
-                lhs.addTerm(t+i.getDiscretizedProcessingTime(), var);
+            for (Machine k : i.getMachinesCanUndertake()) {
+                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
+                    GRBVar var = variables.getZ().get(i).get(k).get(t);
+                    lhs.addTerm(t + i.getDiscretizedProcessingTime(), var);
+                }
             }
 
             GRBLinExpr rhs = new GRBLinExpr();
-            for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
-                GRBVar var = variables.getZ().get(l).get(t);
-                rhs.addTerm(t, var);
+            for (Machine k : l.getMachinesCanUndertake()) {
+                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
+                    GRBVar var = variables.getZ().get(l).get(k).get(t);
+                    rhs.addTerm(t, var);
+                }
             }
-
             model.addConstr(lhs, GRB.LESS_EQUAL, rhs, String.format("Precedence_constraint_task[%d]_task[%d]", i.getId(), l.getId()));
         }
     }
