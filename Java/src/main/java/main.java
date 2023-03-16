@@ -2,9 +2,7 @@ import data.Job;
 import data.Machine;
 import data.Parameters;
 import data.Task;
-import gurobi.GRB;
-import gurobi.GRBException;
-import gurobi.GRBVar;
+import heuristic.Heuristic;
 import kpi.Kpi;
 import model.Model;
 
@@ -28,12 +26,23 @@ public class main {
             }
         }
 
+        for (String input : inputs){
+            Parameters parameters = new Parameters();
+            parameters.readData(input);
+
+            Heuristic heuristic = new Heuristic(parameters);
+            heuristic.optimize();
+        }
+
+        /*
         for(String path : inputs){
             FileReader reader = new FileReader(path);
             reader.close();
         }
 
         runTests(inputs, outputs);
+
+         */
     }
 
     private static void runTests(List<String> inputPaths, List<String> outputPaths) throws Exception {
