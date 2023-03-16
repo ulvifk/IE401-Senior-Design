@@ -1,16 +1,19 @@
-import matplotlib.axes
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes
+import plotly.express as px
 import pandas as pd
 import json
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 import numpy as np
 
-def create_gantt_chart(ax: matplotlib.axes.Axes, fig: matplotlib.figure.Figure, job_list, machine_list, is_save=False, save_path=""):
-    df = pd.DataFrame(columns=["job", "task", "machine", "processing_time", "schedule", "deadline", "priority"])
+def create_gantt_chart(title, scenario_path: str, save_path=""):
+    df = pd.DataFrame(columns=["job", "task", "type", "scheduled_machine", "processing_time", "scheduled_time",
+                               "deadline", "priority"])
+
+    with open(scenario_path, "r") as f:
+        scenario = json.load(f)
 
     priorities = {}
-    for job in job_list:
+    for job in scenario["jobs"]:
         priorities[int(job["id"])] = job["priority"]
 
         if len(job["tasks"]) == 0:
@@ -19,58 +22,47 @@ def create_gantt_chart(ax: matplotlib.axes.Axes, fig: matplotlib.figure.Figure, 
             df.loc[len(df)] = row
 
         for task in job["tasks"]:
-            row = [int(job["id"]), int(task["id"]), int(task["assigned_machine"]),
-                   int(task["processing_time"]), int(task["schedule"]), int(job["deadline"]), job["priority"]]
+            row = [int(job["id"]), int(task["id"]), task["type"], int(task["scheduled_machine"]),
+                   int(task["processing_time"]), int(task["scheduled_time"]), int(job["deadline"]), job["priority"]]
             df.loc[len(df)] = row
 
-    jobs = df["job"].values
-    machines = df["machine"].values
-    tasks = df["task"].values
-    schedules = df["schedule"].values
-    processing_times = df["processing_time"].values
-    deadlines = df["deadline"].values
+    df["end"] = df["scheduled_time"] + df["processing_time"]
 
+    df["type"] = df["type"].astype(str)
+    df["scheduled_machine"] = df["scheduled_machine"].map(lambda x: "Machine " + str(x))
+    df.sort_values(by=["job"], inplace=True)
 
-    colors = ["b", "g", "r", "c", "m", "y", "k"]
-    color_map = [colors[i] for i in machines]
-    x_ticks = [i for i in range(20, np.max(schedules + processing_times) + 30, 10)]
-    y_ticks = [i for i in range(1, np.max(jobs) + 1)]
+    for index, row in df.iterrows():
+        string_name = f"Job {row['job']} | {row['priority']}"
+        df.at[index, "job"] = string_name
 
-    machine_bars = []
+    gantt_fig = px.timeline(df, x_start="scheduled_time", x_end="end", y="job", color="scheduled_machine",
+                      hover_data=["type", "deadline", "priority"], )
+    gantt_fig.update_yaxes(categoryorder="array", categoryarray=df["job"].unique())
+    gantt_fig.layout.xaxis.type = 'linear'
+    for d in gantt_fig.data:
+        filt = df["scheduled_machine"] == d.name
+        d.x = df[filt]["processing_time"].tolist()
+        d.width = 0.7
 
-    for machineObj in machine_list:
-        machine = int(machineObj["id"])
-        bar = ax.barh(y=jobs[machines == machine], width=processing_times[machines == machine],
-                      left=schedules[machines == machine] + 20)
-        machine_bars.append(bar)
+    df_deadlines = pd.DataFrame(columns=["job", "deadline", "end", "delta"])
+    jobs = df["job"].unique()
+    for job in jobs:
+        deadline = df[df["job"] == job]["deadline"].iloc[0]
+        df_deadlines.loc[len(df_deadlines)] = [job, deadline, deadline+0.5, 0.5]
 
-    ax.set_xticks(x_ticks)
-    ax.set_yticks(y_ticks, labels=[f"Job {job_id} ({priorities[job_id]})" for job_id in np.unique(jobs)])
-    ax.set_ylabel("Jobs")
+    deadline_fig = px.timeline(df_deadlines, x_start="deadline", x_end="end", y="job", hover_data=[])
+    deadline_fig.update_yaxes(autorange="reversed")
+    deadline_fig.layout.xaxis.type = 'linear'
+    deadline_fig.data[0].x = df_deadlines["delta"].tolist()
+    deadline_fig.data[0].width = 1
 
-    ax.legend(machine_bars, [f"Machine {i}" for i in [int(machine["id"]) for machine in machine_list]])
+    gantt_fig.add_trace(deadline_fig.data[0])
 
-    ax.barh(y=jobs, width=1, left=deadlines, height=1.2)
-
-    fig.subplots_adjust(left=0.2)
-
-    if(is_save):
-        fig.savefig(save_path)
-
-    fig.show()
+    gantt_fig.show()
 
 if __name__ == "__main__":
-    plt.style.use("seaborn")
 
-    normal = "../Java/output/computational_runs_1/scenario_1_10_03_03_03.json"
-    shifted = "../Java/input/robustness/shifted_scenario_20.json"
-    solved_shifted = "../Java/output/robustness/shifted_scenario_20.json"
-    with open(solved_shifted, "r") as f:
-        scenario = json.load(f)
-    machine_list = scenario["machines"]
-    job_list = scenario["jobs"]
-
-    save_path = "../Java/output/robustness/shifted_gantt_20.png"
-
-    fig, ax = plt.subplots()
-    create_gantt_chart(ax, fig, job_list, machine_list, is_save=True, save_path=save_path)
+    for n in [5, 10, 15]:
+        normal = f"../Java/output/scenario_0_{n}_03_03_03.json"
+        create_gantt_chart("Normal", normal)

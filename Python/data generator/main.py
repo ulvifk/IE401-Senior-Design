@@ -1,22 +1,36 @@
 import json
 import random
 
-from machine import Machine
-from job import Job
-from task import Task
 import numpy as np
 
+from job import Job
+from machine import Machine
+from task import Task
+from task_type import TASK_TYPE
 
-def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, processing_mean, processing_std,
+
+def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean: float, processing_std: float,
                              deadline_factor, deadline_std_factor,
                              low_p, medium_p, high_p,
-                             seed):
-    random.seed(seed)
-    np.random.seed(seed)
+                             machine_seed, instance_seed):
+    random.seed(machine_seed)
+    np.random.seed(machine_seed)
+
+    machines: dict[TASK_TYPE, list[Machine]] = {}
+    base_id = 1
+    for task_type in TASK_TYPE:
+        ranges = [1, 2]
+        n_machine_for_task_type = np.random.choice(ranges)
+        machines[task_type] = [Machine(id=base_id +i, task_type_undertakes=task_type, machine_name="",
+                                       processing_time_constant=np.random.uniform(0.5, 1.5))
+                               for i in range(n_machine_for_task_type)]
+        base_id += len(machines[task_type])
 
     assert low_p + medium_p + high_p == 1
 
-    list_of_machines = [Machine(id=machine_id, machine_name="").__dict__ for machine_id in range(1, n_machine + 1)]
+    random.seed(instance_seed)
+    np.random.seed(instance_seed)
+
     list_of_jobs = [
         Job(priority=np.random.choice(["LOW", "MEDIUM", "HIGH"], p=[low_p, medium_p, high_p]), deadline=0, tasks=[],
             id=i) for i in range(1, n_job + 1)]
@@ -25,39 +39,61 @@ def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, proc
     for job in list_of_jobs:
         list_of_tasks = []
 
-        processing_time = np.round(np.random.normal(processing_mean, processing_std))
-        processing_time = processing_time if processing_time > 1 else 1
+        n_task = np.random.choice(possible_task_numbers)
+        task_types = np.random.choice(list(TASK_TYPE), size=n_task, replace=False)
+        task_types = sorted(task_types, key=lambda x: x.value)
 
-        list_of_tasks.append(Task(id=unique_task_id, processing_time=processing_time,
-                                  assigned_machine=1,
-                                  preceding_task=-1, succeeding_task=unique_task_id + 1, schedule=-1))
+
+        # First task
+        processing_time = np.random.normal(processing_mean, processing_std)
+        list_of_tasks.append(Task(id=unique_task_id,
+                                  type=task_types[0],
+                                  processing_time=processing_time,
+                                  machines_can_undertake=[machine.id for machine in machines[task_types[0]]],
+                                  preceding_task=-1,
+                                  succeeding_task=unique_task_id + 1,
+                                  scheduled_time=-1,
+                                  scheduled_machine=-1))
         unique_task_id += 1
 
-        n_task = np.random.choice(possible_task_numbers)
-        for i in range(1, n_task - 1):
-            processing_time = np.round(np.random.normal(processing_mean, processing_std))
-            processing_time = processing_time if processing_time > 1 else 1
-            list_of_tasks.append(Task(id=unique_task_id, processing_time=processing_time,
-                                      assigned_machine=i + 1,
-                                      preceding_task=list_of_tasks[len(list_of_tasks) - 1].id,
-                                      succeeding_task=unique_task_id + 1, schedule=-1))
+        for task_type in task_types[1:-1]:
+            processing_time = int(np.random.normal(processing_mean, processing_std))
+            list_of_tasks.append(Task(id=unique_task_id,
+                                      type=task_type,
+                                      processing_time=processing_time,
+                                      machines_can_undertake=[machine.id for machine in machines[task_type]],
+                                      preceding_task=unique_task_id - 1,
+                                      succeeding_task=unique_task_id + 1,
+                                      scheduled_time=-1,
+                                      scheduled_machine=-1))
+
             unique_task_id += 1
 
-        processing_time = np.round(np.random.normal(processing_mean, processing_std))
-        processing_time = processing_time if processing_time > 1 else 1
-        list_of_tasks.append(Task(id=unique_task_id, processing_time=processing_time,
-                                  assigned_machine=n_machine,
-                                  preceding_task=list_of_tasks[len(list_of_tasks) - 1].id,
-                                  succeeding_task=-1, schedule=-1))
+        # Last task
+        processing_time = int(np.random.normal(processing_mean, processing_std))
+        list_of_tasks.append(Task(id=unique_task_id,
+                                  type=task_types[-1],
+                                  processing_time=processing_time,
+                                  machines_can_undertake=[machine.id for machine in machines[task_types[-1]]],
+                                  preceding_task=unique_task_id - 1,
+                                  succeeding_task=-1,
+                                  scheduled_time=-1,
+                                  scheduled_machine=-1))
         unique_task_id += 1
 
         job.tasks = list_of_tasks
 
+        job.deadline = 0
+
+    average_machine = np.mean([len(machines[task_type]) for task_type in TASK_TYPE])
+    n_task = sum([len(job.tasks) for job in list_of_jobs])
+    for job in list_of_jobs:
+        deadline_factor = pow(n_task, 1/3) / (average_machine + 1) * 1.2
         deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
         deadline_std = deadline_mean * deadline_std_factor
         deadline = np.round(np.random.normal(deadline_mean, deadline_std))
-
         job.deadline = deadline
+
 
     counts = [2, 4, 4]
     for i in range(len(list_of_jobs)):
@@ -69,6 +105,10 @@ def generate_random_scenario(n_machine, n_job, possible_task_numbers: list, proc
             list_of_jobs[i].priority = "LOW"
 
     list_of_jobs = [job.json_encoded() for job in list_of_jobs]
+    list_of_machines = []
+    for machine_list in machines.values():
+        for machine in machine_list:
+            list_of_machines.append(machine.__dict__())
 
     scenario = {}
     scenario["machines"] = list_of_machines
@@ -81,13 +121,13 @@ if __name__ == "__main__":
 
     n_machine = 5
 
-    for seed in [0, 1, 2, 3, 4]:
-        for n_job in [5, 10, 15, 20]:
-            scenario = generate_random_scenario(n_machine=n_machine, n_job=n_job, possible_task_numbers=[n_machine],
+    for seed in [0]:
+        for n_job in [5, 10, 15]:
+            scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
                                                 processing_mean=10, processing_std=4,
                                                 deadline_factor=2.25, deadline_std_factor=0.1,
                                                 low_p=0.34, medium_p=0.33, high_p=0.33,
-                                                seed=seed)
+                                                machine_seed=0, instance_seed=0)
 
-            with open(f"../../Java/input/computational_runs/scenario_{seed}_{n_job}_03_03_03.json", "w") as f:
+            with open(f"../../Java/input/scenario_{seed}_{n_job}_03_03_03.json", "w") as f:
                 json.dump(scenario, f)

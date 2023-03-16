@@ -11,5 +11,5 @@ class Job:
 
     def json_encoded(self):
         json_string = {"id": self.id, "deadline": self.deadline, "priority": self.priority,
-            "tasks": [task.__dict__ for task in self.tasks]}
+            "tasks": [task.__dict__() for task in self.tasks]}
         return json_string
