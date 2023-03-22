@@ -21,7 +21,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
     for task_type in TASK_TYPE:
         ranges = [1, 2]
         n_machine_for_task_type = np.random.choice(ranges)
-        machines[task_type] = [Machine(id=base_id +i, task_type_undertakes=task_type, machine_name="",
+        machines[task_type] = [Machine(id=base_id + i, task_type_undertakes=task_type, machine_name="",
                                        processing_time_constant=np.random.uniform(0.5, 1.5))
                                for i in range(n_machine_for_task_type)]
         base_id += len(machines[task_type])
@@ -43,7 +43,6 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
         task_types = np.random.choice(list(TASK_TYPE), size=n_task, replace=False)
         task_types = sorted(task_types, key=lambda x: x.value)
 
-
         # First task
         processing_time = np.random.normal(processing_mean, processing_std)
         list_of_tasks.append(Task(id=unique_task_id,
@@ -52,7 +51,8 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
                                   machines_can_undertake=[machine.id for machine in machines[task_types[0]]],
                                   preceding_task=-1,
                                   succeeding_task=unique_task_id + 1,
-                                  scheduled_time=-1,
+                                  scheduled_start_time=-1,
+                                  scheduled_end_time=-1,
                                   scheduled_machine=-1))
         unique_task_id += 1
 
@@ -64,7 +64,8 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
                                       machines_can_undertake=[machine.id for machine in machines[task_type]],
                                       preceding_task=unique_task_id - 1,
                                       succeeding_task=unique_task_id + 1,
-                                      scheduled_time=-1,
+                                      scheduled_start_time=-1,
+                                      scheduled_end_time=-1,
                                       scheduled_machine=-1))
 
             unique_task_id += 1
@@ -77,7 +78,8 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
                                   machines_can_undertake=[machine.id for machine in machines[task_types[-1]]],
                                   preceding_task=unique_task_id - 1,
                                   succeeding_task=-1,
-                                  scheduled_time=-1,
+                                  scheduled_start_time=-1,
+                                  scheduled_end_time=-1,
                                   scheduled_machine=-1))
         unique_task_id += 1
 
@@ -88,12 +90,11 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
     average_machine = np.mean([len(machines[task_type]) for task_type in TASK_TYPE])
     n_task = sum([len(job.tasks) for job in list_of_jobs])
     for job in list_of_jobs:
-        deadline_factor = pow(n_task, 1/3) / (average_machine + 1) * 1.2
+        deadline_factor = pow(n_task, 1 / 3) / (average_machine + 1) * 1.2
         deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
         deadline_std = deadline_mean * deadline_std_factor
         deadline = np.round(np.random.normal(deadline_mean, deadline_std))
-        job.deadline = deadline
-
+        job.deadline = deadline * 0.7
 
     counts = [2, 4, 4]
     for i in range(len(list_of_jobs)):
@@ -129,5 +130,5 @@ if __name__ == "__main__":
                                                 low_p=0.34, medium_p=0.33, high_p=0.33,
                                                 machine_seed=0, instance_seed=0)
 
-            with open(f"../../Java/input/scenario_{seed}_{n_job}_03_03_03.json", "w") as f:
+            with open(f"../../Java/input/scenario_{seed}_{n_job}_dar.json", "w") as f:
                 json.dump(scenario, f)

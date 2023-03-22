@@ -10,7 +10,8 @@ class Task:
     machines_can_undertake: list[int]
     preceding_task: int
     succeeding_task: int
-    scheduled_time: int
+    scheduled_start_time: int
+    scheduled_end_time: int
     scheduled_machine: int
 
     def __dict__(self):
@@ -21,7 +22,8 @@ class Task:
             "machines_can_undertake": [machine_id for machine_id in self.machines_can_undertake],
             "preceding_task": self.preceding_task,
             "succeeding_task": self.succeeding_task,
-            "scheduled_time": self.scheduled_time,
+            "scheduled_start_time": self.scheduled_start_time,
+            "scheduled_end_time": self.scheduled_end_time,
             "scheduled_machine": self.scheduled_machine
         }
 

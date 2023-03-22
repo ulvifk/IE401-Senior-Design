@@ -59,7 +59,7 @@ public class Constraints {
             for (Machine k : i.getMachinesCanUndertake()) {
                 for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
                     GRBVar var = variables.getZ().get(i).get(k).get(t);
-                    lhs.addTerm(t + i.getDiscretizedProcessingTime(), var);
+                    lhs.addTerm(t + i.getDiscretizedProcessingTime() * k.getProcessingTimeConstant(), var);
                 }
             }
 

@@ -76,7 +76,7 @@ public class Parameters {
                 }
                 int predecessorId = taskObject.get("preceding_task").getAsInt();
                 int successorId = taskObject.get("succeeding_task").getAsInt();
-                int oldScheduledTime = taskObject.get("scheduled_time").getAsInt();
+                int oldScheduledTime = taskObject.get("scheduled_start_time").getAsInt();
                 int oldScheduledMachineId = taskObject.get("scheduled_machine").getAsInt();
                 Machine oldScheduledMachine = this.setOfMachines.stream().filter(m -> m.getId() == oldScheduledMachineId).findFirst().orElse(null);
                 if (oldScheduledMachine == null && oldScheduledMachineId != -1){

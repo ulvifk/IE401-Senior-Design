@@ -7,7 +7,7 @@ import numpy as np
 
 def create_gantt_chart(title, scenario_path: str, save_path=""):
     df = pd.DataFrame(columns=["job", "task", "type", "scheduled_machine", "processing_time", "scheduled_time",
-                               "deadline", "priority"])
+                               "deadline", "priority", "end"])
 
     with open(scenario_path, "r") as f:
         scenario = json.load(f)
@@ -23,10 +23,11 @@ def create_gantt_chart(title, scenario_path: str, save_path=""):
 
         for task in job["tasks"]:
             row = [int(job["id"]), int(task["id"]), task["type"], int(task["scheduled_machine"]),
-                   int(task["processing_time"]), int(task["scheduled_time"]), int(job["deadline"]), job["priority"]]
+                   float(task["processing_time"]), float(task["scheduled_start_time"]), int(job["deadline"]),
+                   job["priority"], float(task["scheduled_end_time"])]
             df.loc[len(df)] = row
 
-    df["end"] = df["scheduled_time"] + df["processing_time"]
+    df["delta"] = df["end"] - df["scheduled_time"]
 
     df["type"] = df["type"].astype(str)
     df["scheduled_machine"] = df["scheduled_machine"].map(lambda x: "Machine " + str(x))
@@ -37,12 +38,12 @@ def create_gantt_chart(title, scenario_path: str, save_path=""):
         df.at[index, "job"] = string_name
 
     gantt_fig = px.timeline(df, x_start="scheduled_time", x_end="end", y="job", color="scheduled_machine",
-                      hover_data=["type", "deadline", "priority"], )
+                      hover_data=["task", "type", "deadline", "priority"], )
     gantt_fig.update_yaxes(categoryorder="array", categoryarray=df["job"].unique())
     gantt_fig.layout.xaxis.type = 'linear'
     for d in gantt_fig.data:
         filt = df["scheduled_machine"] == d.name
-        d.x = df[filt]["processing_time"].tolist()
+        d.x = df[filt]["delta"].tolist()
         d.width = 0.7
 
     df_deadlines = pd.DataFrame(columns=["job", "deadline", "end", "delta"])
@@ -63,6 +64,6 @@ def create_gantt_chart(title, scenario_path: str, save_path=""):
 
 if __name__ == "__main__":
 
-    for n in [5, 10, 15]:
-        normal = f"../Java/output/scenario_0_{n}_03_03_03.json"
+    for n in [15]:
+        normal = f"../Java/output/scenario_0_{n}_dar/model_solution.json"
         create_gantt_chart("Normal", normal)

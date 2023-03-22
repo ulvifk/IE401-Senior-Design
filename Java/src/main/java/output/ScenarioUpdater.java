@@ -11,6 +11,7 @@ import data.Task;
 import gurobi.GRB;
 import gurobi.GRBException;
 import gurobi.GRBVar;
+import heuristic.Solution;
 import model.Variables;
 
 import java.io.FileNotFoundException;
@@ -46,8 +47,11 @@ public class ScenarioUpdater {
 
                 Task task = job.getTasks().stream().filter(task1 -> task1.getId() == taskId).findAny().orElse(null);
 
-                taskObject.remove("scheduled_time");
-                taskObject.addProperty("scheduled_time", startTimes.get(task));
+                taskObject.remove("scheduled_start_time");
+                taskObject.addProperty("scheduled_start_time", startTimes.get(task));
+
+                taskObject.remove("scheduled_end_time");
+                taskObject.addProperty("scheduled_end_time", startTimes.get(task) + task.getProcessingTime() * machineMap.get(task).getProcessingTimeConstant());
 
                 taskObject.remove("scheduled_machine");
                 taskObject.addProperty("scheduled_machine", machineMap.get(task).getId());
@@ -112,6 +116,72 @@ public class ScenarioUpdater {
         }
 
         return determinedTasks;
+    }
+
+    private static double calculateTotalWeightedCompletionTime(Map<Task, Solution> solutions){
+        double totalWeightedCompletionTime = 0;
+        for (Solution solution : solutions.values()){
+            if (solution.getTask().getSucceedingTask() == null) {
+                totalWeightedCompletionTime += solution.getTask().getPriority() *
+                        (solution.getStartTime() +
+                                solution.getTask().getProcessingTime() * solution.getMachine().getProcessingTimeConstant());
+                int x = 0;
+            }
+        }
+
+        return totalWeightedCompletionTime;
+    }
+
+    private static double calculateDeviationFromEarlierPlan(Map<Task, Solution> solutions){
+        double totalDeviation = 0;
+        for (Solution solution : solutions.values()){
+            double deviation = solution.getStartTime() - solution.getTask().getOldScheduleTime();
+            totalDeviation += Math.pow(deviation, 2);
+        }
+
+        return totalDeviation;
+    }
+
+    private static double calculateTotalTardiness(Map<Task, Solution> solutions){
+        double totalTardiness = 0;
+        for (Solution solution : solutions.values()){
+            if (solution.getTask().getSucceedingTask() == null){
+                double tardiness = solution.getStartTime() +
+                        solution.getTask().getProcessingTime() * solution.getMachine().getProcessingTimeConstant() -
+                        solution.getTask().getJobWhichBelongs().getDeadline();
+                tardiness = Math.max(0, tardiness);
+                totalTardiness += Math.pow(tardiness, 2);
+            }
+        }
+
+        return totalTardiness;
+    }
+
+    public static Map<Task, Solution> getSolutionMap(Parameters parameters, Variables variables) throws GRBException {
+        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
+        Map<Task, Double> startTimes = getStartTime(parameters, variables);
+        Map<Task, Solution> solutions = new HashMap<>();
+        for (Task task : parameters.getSetOfTasks()){
+            solutions.put(task, new Solution(task, machineMap.get(task), startTimes.get(task)));
+        }
+
+        return solutions;
+    }
+
+    public static void writeStats(String path, Parameters parameters, Map<Task, Solution> solutions) throws FileNotFoundException {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("total_weighted_completion_time", calculateTotalWeightedCompletionTime(solutions));
+        jsonObject.addProperty("deviation_from_earlier_plan", calculateDeviationFromEarlierPlan(solutions));
+        jsonObject.addProperty("total_tardiness", calculateTotalTardiness(solutions));
+        jsonObject.addProperty("n_jobs", parameters.getSetOfJobs().size());
+        jsonObject.addProperty("n_machines", parameters.getSetOfMachines().size());
+        jsonObject.addProperty("n_tasks", parameters.getSetOfTasks().size());
+
+
+        String stats = jsonObject.toString();
+        PrintWriter out = new PrintWriter(path);
+        out.println(stats);
+        out.close();
     }
 
     private static Task getBeforeTask(Task task, Variables variables) throws GRBException {

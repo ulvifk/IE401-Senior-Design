@@ -1,14 +1,21 @@
 package model;
 
+import com.google.gson.JsonObject;
+import data.Machine;
 import data.Parameters;
+import data.Task;
 import gurobi.GRB;
 import gurobi.GRBEnv;
 import gurobi.GRBException;
 import gurobi.GRBModel;
+import heuristic.Solution;
 import output.ScenarioUpdater;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class Model {
 
@@ -50,10 +57,9 @@ public class Model {
         this.model.dispose();
     }
 
-    public void printSolution(String path) throws GRBException, FileNotFoundException {
-        PrintWriter out = new PrintWriter(path);
-        out.println(this.model.getJSONSolution());
-        out.close();
+    public void writeStats(String path) throws GRBException, FileNotFoundException {
+        Map<Task, Solution> solutions = ScenarioUpdater.getSolutionMap(parameters, variables);
+        ScenarioUpdater.writeStats(path, parameters, solutions);
     }
 
     public GRBModel getModel() {

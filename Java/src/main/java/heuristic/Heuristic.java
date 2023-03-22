@@ -9,6 +9,7 @@ import data.Machine;
 import data.Parameters;
 import data.Task;
 import gurobi.GRBException;
+import output.ScenarioUpdater;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -46,7 +47,7 @@ public class Heuristic {
     private void updateD(){
         D.clear();
         for (Task task : unscheduledTasks) {
-            if (this.C.contains(task.getPrecedingTask()) || task.getPrecedingTask() == null) {
+            if (task.getPrecedingTask() == null || this.C.contains(task.getPrecedingTask())) {
                 if (task.getMachinesCanUndertake().stream().anyMatch(this.W::contains)) {
                     D.add(task);
                 }
@@ -164,8 +165,12 @@ public class Heuristic {
             System.out.println(String.format("Task %d scheduled on machine %d to time %f",
                     task.getId(), machine.getId(), t));
             this.solutions.put(task, solution);
+            if (this.unscheduledTasks.size() == 0){
+                break;
+            }
 
             t = this.findT(this.W);
+
             if (t == -1){
                 throw new RuntimeException("t is -1");
             }
@@ -173,9 +178,16 @@ public class Heuristic {
             this.W = this.updateW(t, this.M);
             this.updateC(t);
             this.updateD();
-            while (this.D.size() == 0 && this.unscheduledTasks.size() > 0){
+            while (this.D.size() == 0){
                 List<Machine> mPrime = this.M.stream().filter(mac -> !this.W.contains(mac)).toList();
-                t = this.findT(mPrime);
+
+                if (mPrime.size() == 0){
+                    t++;
+                }
+                else{
+                    t = this.findT(mPrime);
+                }
+
                 List<Machine> wPrime = this.updateW(t, mPrime);
                 for (Machine mac : wPrime){
                     if (!this.W.contains(mac)){
@@ -208,8 +220,11 @@ public class Heuristic {
                 Task task = job.getTasks().stream().filter(task1 -> task1.getId() == taskId).findAny().orElse(null);
                 Solution solution = this.solutions.get(task);
 
-                taskObject.remove("scheduled_time");
-                taskObject.addProperty("scheduled_time", solution.startTime);
+                taskObject.remove("scheduled_start_time");
+                taskObject.addProperty("scheduled_start_time", solution.startTime);
+
+                taskObject.remove("scheduled_end_time");
+                taskObject.addProperty("scheduled_end_time", solution.startTime + task.getProcessingTime() * solution.machine.getProcessingTimeConstant());
 
                 taskObject.remove("scheduled_machine");
                 taskObject.addProperty("scheduled_machine", solution.machine.getId());
@@ -220,5 +235,9 @@ public class Heuristic {
         PrintWriter out = new PrintWriter(outputPath);
         out.println(scenario);
         out.close();
+    }
+
+    public void writeStats(String path) throws FileNotFoundException {
+        ScenarioUpdater.writeStats(path, this.parameters, this.solutions);
     }
 }
