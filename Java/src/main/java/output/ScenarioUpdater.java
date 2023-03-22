@@ -122,10 +122,7 @@ public class ScenarioUpdater {
         double totalWeightedCompletionTime = 0;
         for (Solution solution : solutions.values()){
             if (solution.getTask().getSucceedingTask() == null) {
-                totalWeightedCompletionTime += solution.getTask().getPriority() *
-                        (solution.getStartTime() +
-                                solution.getTask().getProcessingTime() * solution.getMachine().getProcessingTimeConstant());
-                int x = 0;
+                totalWeightedCompletionTime += solution.getTask().getPriority() * solution.getFinishTime();
             }
         }
 
@@ -142,7 +139,7 @@ public class ScenarioUpdater {
         return totalDeviation;
     }
 
-    private static double calculateTotalTardiness(Map<Task, Solution> solutions){
+    private static double calculateTotalWeightedTardiness(Map<Task, Solution> solutions){
         double totalTardiness = 0;
         for (Solution solution : solutions.values()){
             if (solution.getTask().getSucceedingTask() == null){
@@ -150,7 +147,7 @@ public class ScenarioUpdater {
                         solution.getTask().getProcessingTime() * solution.getMachine().getProcessingTimeConstant() -
                         solution.getTask().getJobWhichBelongs().getDeadline();
                 tardiness = Math.max(0, tardiness);
-                totalTardiness += Math.pow(tardiness, 2);
+                totalTardiness += Math.pow(tardiness, 2) * solution.getTask().getPriority();
             }
         }
 
@@ -162,7 +159,8 @@ public class ScenarioUpdater {
         Map<Task, Double> startTimes = getStartTime(parameters, variables);
         Map<Task, Solution> solutions = new HashMap<>();
         for (Task task : parameters.getSetOfTasks()){
-            solutions.put(task, new Solution(task, machineMap.get(task), startTimes.get(task)));
+            solutions.put(task, new Solution(task, machineMap.get(task), startTimes.get(task),
+                    startTimes.get(task) + task.getProcessingTime() * machineMap.get(task).getProcessingTimeConstant()));
         }
 
         return solutions;
@@ -172,7 +170,7 @@ public class ScenarioUpdater {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("total_weighted_completion_time", calculateTotalWeightedCompletionTime(solutions));
         jsonObject.addProperty("deviation_from_earlier_plan", calculateDeviationFromEarlierPlan(solutions));
-        jsonObject.addProperty("total_tardiness", calculateTotalTardiness(solutions));
+        jsonObject.addProperty("total_tardiness", calculateTotalWeightedTardiness(solutions));
         jsonObject.addProperty("n_jobs", parameters.getSetOfJobs().size());
         jsonObject.addProperty("n_machines", parameters.getSetOfMachines().size());
         jsonObject.addProperty("n_tasks", parameters.getSetOfTasks().size());

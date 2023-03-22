@@ -25,8 +25,8 @@ public class main {
 
         for(Integer seed : seeds) {
             for (Integer n_job : n_jobs) {
-                inputs.add(String.format("input/scenario_%d_%d_dar.json", seed, n_job));
-                outputs.add(String.format("output/scenario_%d_%d_dar", seed, n_job));
+                inputs.add(String.format("input/scenario_%d_%d.json", seed, n_job));
+                outputs.add(String.format("output/scenario_%d_%d", seed, n_job));
             }
         }
 
@@ -46,6 +46,7 @@ public class main {
             heuristic.writeStats(outputDirectory + "/heuristic_stats.json");
         }
 
+        /*
         for (String input : inputs){
             String outputDirectory = outputs.get(inputs.indexOf(input));
             File directoryFile = new File(outputDirectory);
@@ -62,6 +63,7 @@ public class main {
             model.writeSolution(input, outputDirectory + "/model_solution.json");
             model.writeStats(outputDirectory + "/model_stats.json");
         }
+        */
 
     }
 

@@ -14,7 +14,12 @@ import output.ScenarioUpdater;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 public class Heuristic {
     private final Parameters parameters;
@@ -44,63 +49,22 @@ public class Heuristic {
         this.solutions = new HashMap<>();
     }
 
-    private void updateD(){
-        D.clear();
-        for (Task task : unscheduledTasks) {
-            if (task.getPrecedingTask() == null || this.C.contains(task.getPrecedingTask())) {
-                if (task.getMachinesCanUndertake().stream().anyMatch(this.W::contains)) {
-                    D.add(task);
-                }
-            }
-        }
+    private double calculateScore(Task task, Machine machine, double time) {
+        double tardinessScore = tardinessScore(task, machine, time);
+
+        return Math.pow(task.getPriority(), 1) * tardinessScore;
     }
 
-    private List<Machine> updateW(double t, List<Machine> machineList){
-        List<Machine> newMachineList = new LinkedList<>();
-        for (Machine machine : machineList){
-            if (I.get(machine) == t){
-                newMachineList.add(machine);
-            }
-        }
-        return newMachineList;
-    }
-
-    private double findT(List<Machine> machines){
-        double t = Double.MAX_VALUE;
-        for (Machine machine : machines) {
-            double idleTime = this.I.get(machine);
-            if (idleTime < t) {
-                t = idleTime;
-            }
-        }
-
-        return t;
-    }
-
-    private void updateC(double t){
-        this.C.clear();
-        for (Task task : this.H){
-            double finishTime = this.solutions.get(task).startTime + task.getProcessingTime();
-            if (finishTime <= t){
-                this.C.add(task);
-            }
-        }
-    }
-
-    private void calculateScore(Task task, Machine machine, int time){
-
-    }
-
-    private Pair<Task, Machine> findBestTaskAndMachine(){
+    private Pair<Task, Machine> findBestTaskAndMachine() {
         double minProcessingTime = Double.MAX_VALUE;
         Task bestTask = null;
         Machine bestMachine = null;
 
         for (Task task : D) {
-            for (Machine machine : task.getMachinesCanUndertake()){
-                if (this.W.contains(machine)){
+            for (Machine machine : task.getMachinesCanUndertake()) {
+                if (this.W.contains(machine)) {
                     double processingTime = task.getProcessingTime() * machine.getProcessingTimeConstant();
-                    if (task.getProcessingTime() * machine.getProcessingTimeConstant() < minProcessingTime){
+                    if (task.getProcessingTime() * machine.getProcessingTimeConstant() < minProcessingTime) {
                         minProcessingTime = processingTime;
                         bestTask = task;
                         bestMachine = machine;
@@ -112,13 +76,33 @@ public class Heuristic {
         return new Pair<>(bestTask, bestMachine);
     }
 
-    private void removeRedundantMachines(){
+    private double tardinessScore(Task task, Machine machine, double time) {
+        double slack = task.getJobWhichBelongs().getDeadline() - (time + task.getProcessingTime() * machine.getProcessingTimeConstant());
+
+        double requiredTime = 0;
+        Task currentTask = task;
+        while (currentTask.getSucceedingTask() != null){
+            currentTask = currentTask.getSucceedingTask();
+
+            List<Double> processingTimes = new LinkedList<>();
+            for (Machine k : currentTask.getMachinesCanUndertake()) {
+                processingTimes.add(currentTask.getProcessingTime() * k.getProcessingTimeConstant());
+            }
+
+            double averageProcessingTime = processingTimes.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+            requiredTime += averageProcessingTime;
+        }
+
+        return Math.pow((slack - requiredTime), 2);
+    }
+
+    private void removeRedundantMachines() {
         ListIterator<Machine> iterator = this.M.listIterator();
         whileLoop:
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             Machine machine = iterator.next();
-            for (Task task : machine.getSetOfAssignedTasks()){
-                if (this.unscheduledTasks.contains(task)){
+            for (Task task : machine.getSetOfAssignedTasks()) {
+                if (this.unscheduledTasks.contains(task)) {
                     continue whileLoop;
                 }
             }
@@ -127,70 +111,122 @@ public class Heuristic {
             iterator.remove();
             this.I.remove(machine);
             this.W.remove(machine);
+            this.M.remove(machine);
         }
     }
 
-    public void optimize(){
+    private Pair<Task, Machine> getNextTaskAndMachine(double t){
+        Machine nextMachine = null;
+        Task nextTask = null;
+        double bestScore = 0;
+        for (Machine machine : this.W){
+            for (Task task : machine.getSetOfAssignedTasks()){
+                if (this.D.contains(task)){
+                    double score = calculateScore(task, machine, t);
+                    if (score > bestScore){
+                        bestScore = score;
+                        nextMachine = machine;
+                        nextTask = task;
+                    }
+                }
+            }
+        }
+
+        return new Pair<Task, Machine>(nextTask, nextMachine);
+    }
+
+    private List<Machine> updateW(double t, List<Machine> machineList) {
+        List<Machine> newMachineList = new LinkedList<>();
+        for (Machine machine : machineList) {
+            if (I.get(machine) == t) {
+                newMachineList.add(machine);
+            }
+        }
+        return newMachineList;
+    }
+
+    private double findT(List<Machine> machines) {
+        double t = Double.MAX_VALUE;
+        for (Machine machine : machines) {
+            double idleTime = this.I.get(machine);
+            if (idleTime < t) {
+                t = idleTime;
+            }
+        }
+
+        return t;
+    }
+
+    private void updateC(double t) {
+        this.C.clear();
+        for (Task task : this.H) {
+            double finishTime = this.solutions.get(task).finishTime;
+            if (finishTime <= t) {
+                this.C.add(task);
+            }
+        }
+    }
+
+    private void updateD() {
+        D.clear();
+        for (Task task : unscheduledTasks) {
+            if (task.getPrecedingTask() == null || this.C.contains(task.getPrecedingTask())) {
+                if (task.getMachinesCanUndertake().stream().anyMatch(this.W::contains)) {
+                    D.add(task);
+                }
+            }
+        }
+    }
+
+    public void optimize() {
         System.out.println("Heuristic started...");
 
         double t = 0;
         this.updateD();
 
-        while (this.unscheduledTasks.size() > 0){
+        while (this.unscheduledTasks.size() > 0) {
 
-            Machine machine;
-            Task task;
-            if (this.W.size() == 1){
-                machine = this.W.get(0);
-                task = this.D.stream().filter(
-                        ts -> ts.getMachinesCanUndertake().contains(machine)).
-                        min(Comparator.comparing(Task::getProcessingTime)).orElse(null);
-
-                if (task == null){
-                    int x = 0;
-                }
-            }
-            else{
-                Pair<Task, Machine> bestTaskAndMachine = this.findBestTaskAndMachine();
-                task = bestTaskAndMachine.first;
-                machine = bestTaskAndMachine.second;
-            }
+            Pair<Task, Machine> bestTaskAndMachine = getNextTaskAndMachine(t);
+            Task task = bestTaskAndMachine.first;
+            Machine machine = bestTaskAndMachine.second;
 
             this.unscheduledTasks.remove(task);
             this.H.add(task);
             this.I.replace(machine, t + task.getProcessingTime() * machine.getProcessingTimeConstant());
             this.removeRedundantMachines();
 
-            Solution solution = new Solution(task, machine, t);
+            Solution solution = new Solution(task, machine, t, t + task.getProcessingTime() * machine.getProcessingTimeConstant());
             System.out.println(String.format("Task %d scheduled on machine %d to time %f",
                     task.getId(), machine.getId(), t));
             this.solutions.put(task, solution);
-            if (this.unscheduledTasks.size() == 0){
+            if (this.unscheduledTasks.size() == 0) {
                 break;
             }
 
-            t = this.findT(this.W);
+            t = this.findT(this.M);
 
-            if (t == -1){
+            if (t == -1) {
                 throw new RuntimeException("t is -1");
             }
 
             this.W = this.updateW(t, this.M);
             this.updateC(t);
             this.updateD();
-            while (this.D.size() == 0){
+            while (this.D.size() == 0) {
                 List<Machine> mPrime = this.M.stream().filter(mac -> !this.W.contains(mac)).toList();
 
-                if (mPrime.size() == 0){
-                    t++;
-                }
-                else{
+                if (mPrime.size() == 0) {
+                    double oldT = t;
+                    t = this.solutions.values().stream().filter(s -> s.finishTime > oldT && !this.C.contains(s.task)).
+                            mapToDouble(s -> s.finishTime).
+                            min().orElseThrow();
+                } else {
                     t = this.findT(mPrime);
                 }
 
                 List<Machine> wPrime = this.updateW(t, mPrime);
-                for (Machine mac : wPrime){
-                    if (!this.W.contains(mac)){
+                for (Machine mac : wPrime) {
+                    if (!this.W.contains(mac)) {
                         this.W.add(mac);
                     }
                 }
@@ -207,13 +243,13 @@ public class Heuristic {
 
         JsonArray jobsArray = jsonObject.getAsJsonArray("jobs");
 
-        for(JsonElement jobElement : jobsArray){
+        for (JsonElement jobElement : jobsArray) {
             JsonObject jobObject = jobElement.getAsJsonObject();
             int jobId = jobObject.get("id").getAsInt();
             Job job = parameters.getSetOfJobs().stream().filter(job1 -> job1.getId() == jobId).findAny().orElse(null);
 
             JsonArray taskArray = jobObject.getAsJsonArray("tasks");
-            for(JsonElement taskElement : taskArray){
+            for (JsonElement taskElement : taskArray) {
                 JsonObject taskObject = taskElement.getAsJsonObject();
                 int taskId = taskObject.get("id").getAsInt();
 
@@ -224,7 +260,7 @@ public class Heuristic {
                 taskObject.addProperty("scheduled_start_time", solution.startTime);
 
                 taskObject.remove("scheduled_end_time");
-                taskObject.addProperty("scheduled_end_time", solution.startTime + task.getProcessingTime() * solution.machine.getProcessingTimeConstant());
+                taskObject.addProperty("scheduled_end_time", solution.finishTime);
 
                 taskObject.remove("scheduled_machine");
                 taskObject.addProperty("scheduled_machine", solution.machine.getId());

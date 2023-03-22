@@ -7,11 +7,13 @@ public class Solution {
     final Task task;
     final Machine machine;
     final double startTime;
+    final double finishTime;
 
-    public Solution(Task task, Machine machine, double startTime) {
+    public Solution(Task task, Machine machine, double startTime, double finishTime) {
         this.task = task;
         this.machine = machine;
         this.startTime = startTime;
+        this.finishTime = finishTime;
     }
 
     public Task getTask() {
@@ -24,5 +26,9 @@ public class Solution {
 
     public double getStartTime() {
         return startTime;
+    }
+
+    public double getFinishTime() {
+        return finishTime;
     }
 }
