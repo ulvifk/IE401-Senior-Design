@@ -19,7 +19,7 @@ public class Objective {
             Task lastTask = job.getTasks().get(job.getTasks().size() - 1);
             for (Machine k : lastTask.getMachinesCanUndertake()) {
                 for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
-                    double completionTime = t + lastTask.getDiscretizedProcessingTime() * k.getProcessingTimeConstant();
+                    double completionTime = t + lastTask.getDiscretizedProcessingTime(k) * k.getProcessingTimeConstant();
                     double priority = lastTask.getPriority();
 
                     GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
@@ -32,7 +32,7 @@ public class Objective {
             if (job.getTasks().size() == 0) continue;
             Task lastTask = job.getTasks().get(job.getTasks().size() - 1);
             for (Machine k : lastTask.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTardyTimes(lastTask)) {
+                for (int t : parameters.getSetOfTardyTimes(lastTask, k)) {
                     double tardinessPenalty = getTardinessPenalty(lastTask, k, t);
 
                     GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
@@ -63,7 +63,7 @@ public class Objective {
     }
 
     private static double getTardinessPenalty(Task lastTask, Machine k, int t) {
-        double tardinessAmount = t + lastTask.getDiscretizedProcessingTime() * k.getProcessingTimeConstant() - lastTask.getJobWhichBelongs().getDeadline();
+        double tardinessAmount = t + lastTask.getDiscretizedProcessingTime(k) * k.getProcessingTimeConstant() - lastTask.getJobWhichBelongs().getDeadline();
 
         return Math.pow(lastTask.getPriority() * tardinessAmount, 2);
     }

@@ -94,7 +94,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
         deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
         deadline_std = deadline_mean * deadline_std_factor
         deadline = np.round(np.random.normal(deadline_mean, deadline_std))
-        job.deadline = deadline * 0.7
+        job.deadline = deadline
 
     counts = [2, 4, 4]
     for i in range(len(list_of_jobs)):
@@ -122,13 +122,13 @@ if __name__ == "__main__":
 
     n_machine = 5
 
-    for seed in [0]:
+    for seed in [0, 1, 2]:
         for n_job in [5, 10, 15]:
             scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
                                                 processing_mean=10, processing_std=4,
                                                 deadline_factor=2.25, deadline_std_factor=0.1,
                                                 low_p=0.34, medium_p=0.33, high_p=0.33,
-                                                machine_seed=0, instance_seed=0)
+                                                machine_seed=seed, instance_seed=seed)
 
-            with open(f"../../Java/input/scenario_{seed}_{n_job}_dar.json", "w") as f:
+            with open(f"../../Java/input/scenario_{seed}_{n_job}.json", "w") as f:
                 json.dump(scenario, f)

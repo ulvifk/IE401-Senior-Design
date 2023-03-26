@@ -1,16 +1,7 @@
-import data.Job;
-import data.Machine;
 import data.Parameters;
-import data.Task;
-import gurobi.GRB;
-import gurobi.GRBException;
-import gurobi.GRBVar;
 import heuristic.Heuristic;
-import kpi.Kpi;
-import model.Model;
 
 import java.io.File;
-import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,17 +11,17 @@ public class main {
         List<String> inputs = new ArrayList<>();
         List<String> outputs = new ArrayList<>();
 
-        Integer[] n_jobs = new Integer[] {5, 10, 15};
-        Integer[] seeds = new Integer[] {0};
+        Integer[] n_jobs = new Integer[]{15};
+        Integer[] seeds = new Integer[]{0, 1, 2};
 
-        for(Integer seed : seeds) {
+        for (Integer seed : seeds) {
             for (Integer n_job : n_jobs) {
-                inputs.add(String.format("input/scenario_%d_%d.json", seed, n_job));
-                outputs.add(String.format("output/scenario_%d_%d", seed, n_job));
+                inputs.add(String.format("Java/input/scenario_%d_%d.json", seed, n_job));
+                outputs.add(String.format("Java/output/scenario_%d_%d", seed, n_job));
             }
         }
 
-        for (String input : inputs){
+        for (String input : inputs) {
             String outputDirectory = outputs.get(inputs.indexOf(input));
             File directoryFile = new File(outputDirectory);
             if (!directoryFile.exists()) {
@@ -46,7 +37,7 @@ public class main {
             heuristic.writeStats(outputDirectory + "/heuristic_stats.json");
         }
 
-        /*
+/*
         for (String input : inputs){
             String outputDirectory = outputs.get(inputs.indexOf(input));
             File directoryFile = new File(outputDirectory);
@@ -63,7 +54,7 @@ public class main {
             model.writeSolution(input, outputDirectory + "/model_solution.json");
             model.writeStats(outputDirectory + "/model_stats.json");
         }
-        */
+*/
 
     }
 

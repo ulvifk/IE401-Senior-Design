@@ -51,10 +51,12 @@ public class ScenarioUpdater {
                 taskObject.addProperty("scheduled_start_time", startTimes.get(task));
 
                 taskObject.remove("scheduled_end_time");
-                taskObject.addProperty("scheduled_end_time", startTimes.get(task) + task.getProcessingTime() * machineMap.get(task).getProcessingTimeConstant());
+                taskObject.addProperty("scheduled_end_time", startTimes.get(task) + task.getProcessingTime(machineMap.get(task)));
 
                 taskObject.remove("scheduled_machine");
                 taskObject.addProperty("scheduled_machine", machineMap.get(task).getId());
+
+                taskObject.addProperty("score", 0);
             }
         }
 
@@ -96,6 +98,7 @@ public class ScenarioUpdater {
 
         Map<Task, Double> determinedTasks = new HashMap<>();
         List<Task> undeterminedTasks = new LinkedList<>(parameters.getSetOfTasks());
+        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
 
         while (undeterminedTasks.size() > 0){
             ListIterator<Task> undeterminedTaskIterator = undeterminedTasks.listIterator();
@@ -107,8 +110,8 @@ public class ScenarioUpdater {
                 Task beforeTask = getBeforeTask(task, variables);
                 if (beforeTask != null && !determinedTasks.containsKey(beforeTask)) continue;
 
-                double precedingTaskEnd = precedingTask != null ? determinedTasks.get(precedingTask) + precedingTask.getProcessingTime() : 0;
-                double beforeTaskEnd = beforeTask != null ? determinedTasks.get(beforeTask) + beforeTask.getProcessingTime() : 0;
+                double precedingTaskEnd = precedingTask != null ? determinedTasks.get(precedingTask) + precedingTask.getProcessingTime(machineMap.get(precedingTask)) : 0;
+                double beforeTaskEnd = beforeTask != null ? determinedTasks.get(beforeTask) + beforeTask.getProcessingTime(machineMap.get(beforeTask)) : 0;
 
                 determinedTasks.put(task, Math.max(precedingTaskEnd, beforeTaskEnd));
                 undeterminedTaskIterator.remove();
@@ -118,9 +121,9 @@ public class ScenarioUpdater {
         return determinedTasks;
     }
 
-    private static double calculateTotalWeightedCompletionTime(Map<Task, Solution> solutions){
+    public static double calculateTotalWeightedCompletionTime(Map<Task, Solution> solutions) {
         double totalWeightedCompletionTime = 0;
-        for (Solution solution : solutions.values()){
+        for (Solution solution : solutions.values()) {
             if (solution.getTask().getSucceedingTask() == null) {
                 totalWeightedCompletionTime += solution.getTask().getPriority() * solution.getFinishTime();
             }
@@ -129,9 +132,9 @@ public class ScenarioUpdater {
         return totalWeightedCompletionTime;
     }
 
-    private static double calculateDeviationFromEarlierPlan(Map<Task, Solution> solutions){
+    public static double calculateDeviationFromEarlierPlan(Map<Task, Solution> solutions) {
         double totalDeviation = 0;
-        for (Solution solution : solutions.values()){
+        for (Solution solution : solutions.values()) {
             double deviation = solution.getStartTime() - solution.getTask().getOldScheduleTime();
             totalDeviation += Math.pow(deviation, 2);
         }
@@ -139,12 +142,12 @@ public class ScenarioUpdater {
         return totalDeviation;
     }
 
-    private static double calculateTotalWeightedTardiness(Map<Task, Solution> solutions){
+    public static double calculateTotalWeightedTardiness(Map<Task, Solution> solutions) {
         double totalTardiness = 0;
-        for (Solution solution : solutions.values()){
-            if (solution.getTask().getSucceedingTask() == null){
+        for (Solution solution : solutions.values()) {
+            if (solution.getTask().getSucceedingTask() == null) {
                 double tardiness = solution.getStartTime() +
-                        solution.getTask().getProcessingTime() * solution.getMachine().getProcessingTimeConstant() -
+                        solution.getTask().getProcessingTime(solution.getMachine()) -
                         solution.getTask().getJobWhichBelongs().getDeadline();
                 tardiness = Math.max(0, tardiness);
                 totalTardiness += Math.pow(tardiness, 2) * solution.getTask().getPriority();
@@ -160,7 +163,7 @@ public class ScenarioUpdater {
         Map<Task, Solution> solutions = new HashMap<>();
         for (Task task : parameters.getSetOfTasks()){
             solutions.put(task, new Solution(task, machineMap.get(task), startTimes.get(task),
-                    startTimes.get(task) + task.getProcessingTime() * machineMap.get(task).getProcessingTimeConstant()));
+                    startTimes.get(task) + task.getProcessingTime(machineMap.get(task))));
         }
 
         return solutions;

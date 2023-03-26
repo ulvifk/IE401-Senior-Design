@@ -5,8 +5,8 @@ import data.Parameters;
 import data.Task;
 import gurobi.GRB;
 import gurobi.GRBException;
-import gurobi.GRBModel;
 import gurobi.GRBLinExpr;
+import gurobi.GRBModel;
 import gurobi.GRBVar;
 
 import java.util.ArrayList;
@@ -38,7 +38,7 @@ public class Constraints {
             for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
                 GRBLinExpr lhs = new GRBLinExpr();
                 for(Task i : k.getSetOfAssignedTasks()){
-                    ArrayList<Integer> setOfTBar = getSetOfTBar(i, t);
+                    ArrayList<Integer> setOfTBar = getSetOfTBar(i, k, t);
                     for(Integer tBar : setOfTBar){
                         GRBVar var = variables.getZ().get(i).get(k).get(tBar);
                         lhs.addTerm(1, var);
@@ -59,7 +59,7 @@ public class Constraints {
             for (Machine k : i.getMachinesCanUndertake()) {
                 for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
                     GRBVar var = variables.getZ().get(i).get(k).get(t);
-                    lhs.addTerm(t + i.getDiscretizedProcessingTime() * k.getProcessingTimeConstant(), var);
+                    lhs.addTerm(t + i.getDiscretizedProcessingTime(k), var);
                 }
             }
 
@@ -74,10 +74,10 @@ public class Constraints {
         }
     }
 
-    private static ArrayList<Integer> getSetOfTBar(Task i, int t){
+    private static ArrayList<Integer> getSetOfTBar(Task i, Machine k, int t) {
         ArrayList<Integer> setOfTBar = new ArrayList<>();
-        for(int tBar = (t - i.getDiscretizedProcessingTime()) >= 0 ? (t - i.getDiscretizedProcessingTime()) + 1 : 0
-            ; tBar<=t; tBar++){
+        for (int tBar = (t - i.getDiscretizedProcessingTime(k)) >= 0 ? (t - i.getDiscretizedProcessingTime(k)) + 1 : 0
+             ; tBar <= t; tBar++) {
             setOfTBar.add(tBar);
         }
 

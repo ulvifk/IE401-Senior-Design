@@ -68,7 +68,6 @@ public class Parameters {
                 int taskId = taskObject.get("id").getAsInt();
                 String type = taskObject.get("type").getAsString();
                 double processingTime = taskObject.get("processing_time").getAsDouble();
-                int discretizedProcessingTime = getRoundUpToClosestFactor(processingTime);
                 JsonArray machinesCanUnderTakeJsonArr = taskObject.get("machines_can_undertake").getAsJsonArray();
                 ArrayList<Integer> machinesCanUndertake = new ArrayList<>();
                 for(JsonElement machineId : machinesCanUnderTakeJsonArr){
@@ -83,10 +82,10 @@ public class Parameters {
                     throw new Exception("Invalid old scheduled machine id");
                 }
 
-                Task task = new Task(taskId, processingTime, discretizedProcessingTime, predecessorId, successorId, job, priority, oldScheduledTime, oldScheduledMachine);
+                Task task = new Task(taskId, processingTime, predecessorId, successorId, job, priority, oldScheduledTime, oldScheduledMachine);
 
                 List<Machine> machinesList = this.setOfMachines.stream().filter(m -> m.getType().equals(type)).toList();
-                if(machinesCanUndertake.size() == 0){
+                if (machinesCanUndertake.size() == 0) {
                     throw new Exception("A task is not assigned to any machine");
                 }
 
@@ -94,6 +93,11 @@ public class Parameters {
                     m.addTask(task);
                     task.addMachineCanUnderTake(m);
                 });
+
+                for (Machine machine : task.getMachinesCanUndertake()) {
+                    task.addProcessingTime(machine);
+                    task.addDiscretizedProcessingTime(machine, getRoundUpToClosestFactor(task.getProcessingTime(machine)));
+                }
 
                 taskList.add(task);
                 this.setOfTasks.add(task);
@@ -112,10 +116,10 @@ public class Parameters {
         }
     }
 
-    public List<Integer> getSetOfTardyTimes(Task i){
+    public List<Integer> getSetOfTardyTimes(Task i, Machine k) {
         List<Integer> setOfTardyPoints = new ArrayList<>();
-        for(int t = (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime()) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime() + 1) : 0;
-            t <= this.finalTimePoint; t++){
+        for (int t = (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
+             t <= this.finalTimePoint; t++) {
             setOfTardyPoints.add(t);
         }
         return setOfTardyPoints;

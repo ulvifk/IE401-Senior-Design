@@ -5,9 +5,10 @@ import data.Task;
 
 public class Solution {
     final Task task;
-    final Machine machine;
-    final double startTime;
-    final double finishTime;
+    Machine machine;
+    double startTime;
+    double finishTime;
+    double score;
 
     public Solution(Task task, Machine machine, double startTime, double finishTime) {
         this.task = task;
@@ -31,4 +32,6 @@ public class Solution {
     public double getFinishTime() {
         return finishTime;
     }
+
+
 }
