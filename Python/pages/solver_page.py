@@ -2,8 +2,10 @@ import json
 
 import numpy as np
 import pandas as pd
+import streamlit as st
 import plotly.express as px
 
+st.set_page_config(page_title="Dashboard", page_icon=":bar_chart:", layout="wide")
 
 def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path=""):
     df = pd.DataFrame(columns=["job", "task", "type", "scheduled_machine", "processing_time", "scheduled_time",
@@ -94,14 +96,34 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
                              bordercolor='black',
                              borderwidth=1)
 
-    return gantt_fig
+    gantt_fig.update_layout(title=title)
 
+    return gantt_fig
+def solver_page():
+    st.title("Solver")
+    st.write("**This is a solver for the job shop scheduling problem.**")
+
+    output_path = f"solution.json"
+
+    scenario = st.session_state.scenario
+    parameters = st.session_state.parameters
+    heuristic = st.session_state.heuristic
+
+    col_1, col_2, col_3 = st.columns([1, 1, 1])
+    with col_1:
+        parameters.alpha_completion_time = st.number_input("Alpha completion time", value=1.0)
+    with col_2:
+        parameters.alpha_tardiness = st.number_input("Alpha tardiness", value=10.0)
+    with col_3:
+        parameters.alpha_robust = st.number_input("Alpha deviation", value=0.1)
+
+    heuristic.reset()
+    heuristic.optimize()
+    heuristic.write_solution(scenario, "solution.json")
+    heuristic.write_stats("stats.json")
+
+    st.plotly_chart(create_gantt_chart(f"{parameters.alpha_completion_time}", "solution.json", "stats.json"),
+                    use_container_width=True)
 
 if __name__ == "__main__":
-
-    for seed in [0]:
-        for n in [15]:
-            normal = f"solution.json"
-            stats = f"stats.json"
-            fig = create_gantt_chart("Normal", normal, stats)
-            fig.show()
+    solver_page()
