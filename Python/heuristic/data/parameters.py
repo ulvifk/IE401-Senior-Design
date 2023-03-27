@@ -8,6 +8,9 @@ class Parameters:
     alpha_completion_time: float
     alpha_tardiness: float
     alpha_robust: float
+    low_priority: float
+    medium_priority: float
+    high_priority: float
 
     def __init__(self):
         self.set_of_jobs = []
@@ -17,6 +20,18 @@ class Parameters:
         self.alpha_completion_time = 1
         self.alpha_tardiness = 10
         self.alpha_robust = 0.1
+
+        self.low_priority = 1
+        self.medium_priority = 4
+        self.high_priority = 16
+
+    def get_priority(self, priority: str):
+        if priority == 'LOW':
+            return self.low_priority
+        elif priority == 'MEDIUM':
+            return self.medium_priority
+        elif priority == 'HIGH':
+            return self.high_priority
 
     def read_data(self, path=None, json_file=None):
         if path is not None:
@@ -37,13 +52,9 @@ class Parameters:
             id = int(job['id'])
             deadline = int(job['deadline'])
             priority = job['priority']
-            if priority == 'LOW':
-                priority = 1
-            elif priority == 'MEDIUM':
-                priority = 2
-            elif priority == 'HIGH':
-                priority = 3
-            self.set_of_jobs.append(Job(id, deadline, priority))
+            string_priority = priority
+            priority = self.get_priority(string_priority)
+            self.set_of_jobs.append(Job(id, deadline, priority, string_priority))
 
             for task in job['tasks']:
                 id = int(task['id'])

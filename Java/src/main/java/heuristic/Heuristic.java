@@ -21,7 +21,7 @@ import java.util.ListIterator;
 import java.util.Map;
 
 public class Heuristic {
-    private final int slack = 2;
+    private final int slack = 5;
     private final Parameters parameters;
     private final List<Task> unscheduledTasks;
     private final List<Machine> M;

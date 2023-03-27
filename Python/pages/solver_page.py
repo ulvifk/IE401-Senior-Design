@@ -5,6 +5,8 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+from heuristic.data import Job
+
 st.set_page_config(page_title="Dashboard", page_icon=":bar_chart:", layout="wide")
 
 def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path=""):
@@ -109,6 +111,8 @@ def solver_page():
     parameters = st.session_state.parameters
     heuristic = st.session_state.heuristic
 
+    job_map = {f"Job {job.id}": job for job in parameters.set_of_jobs}
+
     col_1, col_2, col_3 = st.columns([1, 1, 1])
     with col_1:
         parameters.alpha_completion_time = st.number_input("Alpha completion time", value=1.0)
@@ -116,6 +120,23 @@ def solver_page():
         parameters.alpha_tardiness = st.number_input("Alpha tardiness", value=10.0)
     with col_3:
         parameters.alpha_robust = st.number_input("Alpha deviation", value=0.1)
+
+    with st.sidebar:
+        job_name = st.selectbox("Job", list(job_map.keys()))
+        job: Job = job_map[job_name]
+
+        priorities = ["LOW", "MEDIUM", "HIGH"]
+        radio_index = priorities.index(job.string_priority)
+        new_priority = st.radio("Priority", priorities, index=radio_index)
+        job.string_priority = new_priority
+        job.priority = parameters.get_priority(new_priority)
+        for task in job.tasks:
+            task.priority = job.priority
+
+        deadline = st.number_input("Deadline", value=job.deadline, min_value=0, max_value=1000)
+        job.deadline = deadline
+
+        st.write(f"Job {job.id} | {job.string_priority} | {job.deadline}")
 
     heuristic.reset()
     heuristic.optimize()

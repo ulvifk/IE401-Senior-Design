@@ -191,8 +191,17 @@ class Heuristic:
                 self._update_D()
 
     def write_solution(self, scenario, output_path: str):
-        for job in scenario['jobs']:
-            for task_object in job['tasks']:
+        for job_object in scenario['jobs']:
+            job = None
+            for j in self.parameters.set_of_jobs:
+                if j.id == job_object['id']:
+                    job = j
+                    break
+
+            job_object["deadline"] = job.deadline
+            job_object["priority"] = job.string_priority
+
+            for task_object in job_object['tasks']:
                 task = None
                 for tsk in self.parameters.set_of_tasks:
                     if tsk.id == int(task_object['id']):

@@ -44,9 +44,11 @@ class Job:
     tasks: list[Task]
     deadline: int
     priority: float
+    string_priority: str
 
-    def __init__(self, id: int, deadline: int, priority: float):
+    def __init__(self, id: int, deadline: int, priority: float, string_priority: str):
         self.id = id
         self.tasks = []
         self.deadline = deadline
         self.priority = priority
+        self.string_priority = string_priority
