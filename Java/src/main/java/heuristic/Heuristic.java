@@ -296,6 +296,6 @@ public class Heuristic {
     }
 
     public void writeStats(String path) throws FileNotFoundException {
-        ScenarioUpdater.writeStats(path, this.parameters, this.solutions);
+        ScenarioUpdater.writeStats(path, this.parameters, this.solutions, 0);
     }
 }

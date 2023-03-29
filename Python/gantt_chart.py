@@ -98,11 +98,10 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
 
 
 if __name__ == "__main__":
-
-    for seed in [0, 1, 2]:
-        for n in [15]:
-            normal = f"../Java/output/scenario_{seed}_{n}/heuristic_solution.json"
-            stats = f"../Java/output/scenario_{seed}_{n}/heuristic_stats.json"
+    for seed in [0]:
+        for n in [10]:
+            normal = f"solution_{seed}_{n}.json"
+            stats = f"stats_{seed}_{n}.json"
             create_gantt_chart("Normal", normal, stats)
 
             normal = f"../Java/output/scenario_{seed}_{n}/model_solution.json"

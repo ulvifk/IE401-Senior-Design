@@ -33,6 +33,7 @@ public class ScenarioUpdater {
 
         testPrint(parameters, variables);
         Map<Task, Double> startTimes = getStartTime(parameters, variables);
+
         Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
 
         for(JsonElement jobElement : jobsArray){
@@ -135,6 +136,7 @@ public class ScenarioUpdater {
     public static double calculateDeviationFromEarlierPlan(Map<Task, Solution> solutions) {
         double totalDeviation = 0;
         for (Solution solution : solutions.values()) {
+            if (solution.getTask().getOldScheduleTime() < 0) continue;
             double deviation = solution.getStartTime() - solution.getTask().getOldScheduleTime();
             totalDeviation += Math.pow(deviation, 2);
         }
@@ -169,11 +171,12 @@ public class ScenarioUpdater {
         return solutions;
     }
 
-    public static void writeStats(String path, Parameters parameters, Map<Task, Solution> solutions) throws FileNotFoundException {
+    public static void writeStats(String path, Parameters parameters, Map<Task, Solution> solutions, double obj) throws FileNotFoundException {
         JsonObject jsonObject = new JsonObject();
         jsonObject.addProperty("total_weighted_completion_time", calculateTotalWeightedCompletionTime(solutions));
         jsonObject.addProperty("deviation_from_earlier_plan", calculateDeviationFromEarlierPlan(solutions));
         jsonObject.addProperty("total_tardiness", calculateTotalWeightedTardiness(solutions));
+        jsonObject.addProperty("objective", obj);
         jsonObject.addProperty("n_jobs", parameters.getSetOfJobs().size());
         jsonObject.addProperty("n_machines", parameters.getSetOfMachines().size());
         jsonObject.addProperty("n_tasks", parameters.getSetOfTasks().size());

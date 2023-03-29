@@ -1,5 +1,6 @@
 import data.Parameters;
 import heuristic.Heuristic;
+import model.Model;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ public class main {
         List<String> inputs = new ArrayList<>();
         List<String> outputs = new ArrayList<>();
 
-        Integer[] n_jobs = new Integer[]{15};
+        Integer[] n_jobs = new Integer[]{5, 10};
         Integer[] seeds = new Integer[]{0, 1, 2};
 
         for (Integer seed : seeds) {
@@ -37,7 +38,7 @@ public class main {
             heuristic.writeStats(outputDirectory + "/heuristic_stats.json");
         }
 
-/*
+
         for (String input : inputs){
             String outputDirectory = outputs.get(inputs.indexOf(input));
             File directoryFile = new File(outputDirectory);
@@ -54,7 +55,7 @@ public class main {
             model.writeSolution(input, outputDirectory + "/model_solution.json");
             model.writeStats(outputDirectory + "/model_stats.json");
         }
-*/
+
 
     }
 

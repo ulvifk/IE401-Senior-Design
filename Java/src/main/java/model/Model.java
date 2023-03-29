@@ -59,7 +59,9 @@ public class Model {
 
     public void writeStats(String path) throws GRBException, FileNotFoundException {
         Map<Task, Solution> solutions = ScenarioUpdater.getSolutionMap(parameters, variables);
-        ScenarioUpdater.writeStats(path, parameters, solutions);
+
+        double obj = this.model.get(GRB.DoubleAttr.ObjVal);
+        ScenarioUpdater.writeStats(path, parameters, solutions, obj);
     }
 
     public GRBModel getModel() {

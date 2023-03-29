@@ -11,6 +11,7 @@ class Parameters:
     low_priority: float
     medium_priority: float
     high_priority: float
+    scenario: dict
 
     def __init__(self):
         self.set_of_jobs = []
@@ -40,6 +41,8 @@ class Parameters:
 
         if json_file is not None:
             scenario = json_file
+
+        self.scenario = scenario
 
         for machine in scenario['machines']:
             id = int(machine['id'])

@@ -96,7 +96,7 @@ public class Parameters {
 
                 for (Machine machine : task.getMachinesCanUndertake()) {
                     task.addProcessingTime(machine);
-                    task.addDiscretizedProcessingTime(machine, getRoundUpToClosestFactor(task.getProcessingTime(machine)));
+                    task.addDiscretizedProcessingTime(machine, getRoundToClosestFactor(task.getProcessingTime(machine)));
                 }
 
                 taskList.add(task);
@@ -118,7 +118,7 @@ public class Parameters {
 
     public List<Integer> getSetOfTardyTimes(Task i, Machine k) {
         List<Integer> setOfTardyPoints = new ArrayList<>();
-        for (int t = (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
+        for (int t = (i.getJobWhichBelongs().getDeadline() - i.getProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
              t <= this.finalTimePoint; t++) {
             setOfTardyPoints.add(t);
         }
@@ -126,11 +126,15 @@ public class Parameters {
     }
 
     public int getRoundUpToClosestFactor(double val){
-        return (int) (Math.ceil(val / (double) this.timeWindowLength));
+        return (int) (Math.ceil(val / this.timeWindowLength) * this.timeWindowLength);
+    }
+
+    public int getRoundToClosestFactor(double val){
+        return (int) (Math.round(val / this.timeWindowLength) * this.timeWindowLength);
     }
 
     public int getRoundDownToClosestFactor(double val){
-        return (int) (Math.floor(val / (double) this.timeWindowLength) );
+        return (int) (Math.floor(val / timeWindowLength) * timeWindowLength);
     }
 
     public ArrayList<Job> getSetOfJobs() {

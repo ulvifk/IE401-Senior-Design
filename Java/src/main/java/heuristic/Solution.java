@@ -33,5 +33,11 @@ public class Solution {
         return finishTime;
     }
 
+    public void setStartTime(double startTime) {
+        this.startTime = startTime;
+    }
 
+    public void setFinishTime(double finishTime) {
+        this.finishTime = finishTime;
+    }
 }

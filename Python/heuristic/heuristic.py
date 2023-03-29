@@ -5,11 +5,10 @@ import numpy as np
 
 from .data import Parameters, Task, Job, Machine
 from .solution import Solution
-from .stats import write_stats
-import streamlit as st
+from .stats import *
 
 class Heuristic:
-    slack = 2
+    slack: float
     parameters: Parameters
     unscheduled_tasks: list[Task]
     M: list[Machine]
@@ -19,6 +18,17 @@ class Heuristic:
     W: list[Machine]
     I: dict[Machine, float]
     solutions: dict[Task, Solution]
+
+    alpha_tardiness: float
+    alpha_deviation: float
+    alpha_completion_time: float
+    tightness_window: int
+    tardiness_pow: float
+    deviation_pow: float
+    time_pow: float
+    high_priority: float
+    medium_priority: float
+    low_priority: float
 
     def __init__(self, parameters: Parameters):
         self.parameters = parameters
@@ -31,6 +41,16 @@ class Heuristic:
         self.I = {machine: 0 for machine in self.M}
         self.solutions = {}
 
+        self.slack = 2
+        self.tightness_window = 30
+        self.tardiness_pow = 2
+        self.deviation_pow = 2
+        self.time_pow = 1
+
+        self.high_priority = 16
+        self.medium_priority = 4
+        self.low_priority = 1
+
     def reset(self):
         self.unscheduled_tasks = self.parameters.set_of_tasks.copy()
         self.H = []
@@ -40,6 +60,16 @@ class Heuristic:
         self.M = self.parameters.set_of_machines.copy()
         self.I = {machine: 0 for machine in self.M}
         self.solutions = {}
+
+    def _get_priority(self, task):
+        if task.job.string_priority == "HIGH":
+            return self.high_priority
+
+        elif task.job.string_priority == "MEDIUM":
+            return self.medium_priority
+
+        else:
+            return self.low_priority
 
     def _tardiness_score(self, task: Task, machine: Machine, time: float) -> float:
         slack = task.job.deadline - (time + task.processing_times[machine])
@@ -55,22 +85,25 @@ class Heuristic:
             required_time += average_processing_time
 
         slack = slack - required_time
-        penalty = max(0, 30-slack)
+        penalty = max(0, self.tightness_window-slack)
 
-        return np.power(penalty, 2)
+        return np.power(penalty, self.tardiness_pow)
 
-    def _time_score(self, time):
-        return -time
+    def _time_score(self, time, task: Task, machine: Machine) -> float:
+        return -np.power((time + task.processing_times[machine]), self.time_pow)
 
     def _deviation_score(self, task: Task, time: float) -> float:
-        return np.power(task.old_scheduled_time - time, 2)
+        if task.old_scheduled_time < 0:
+            return 0
+
+        return np.power(task.old_scheduled_time - time, self.deviation_pow)
 
     def _calculate_score(self, task: Task, machine: Machine, time: float) -> float:
-        tardiness_score = self.parameters.alpha_tardiness * self._tardiness_score(task, machine, time)
-        time_score = self.parameters.alpha_completion_time * self._time_score(time)
-        deviation_score = self.parameters.alpha_robust * self._deviation_score(task, time)
+        tardiness_score = self.alpha_tardiness * self._tardiness_score(task, machine, time)
+        time_score = self.alpha_completion_time * self._time_score(time, task, machine)
+        deviation_score = self.alpha_deviation * self._deviation_score(task, time)
 
-        return task.priority * (tardiness_score + time_score + deviation_score)
+        return self._get_priority(task) * (tardiness_score + time_score + deviation_score)
 
     def _remove_redundant_machines(self):
         machines_to_remove = []
@@ -148,8 +181,6 @@ class Heuristic:
         return t
 
     def optimize(self):
-        st.write(f"Optimizing... | {time.time()}")
-
         t = 0
         self._update_D()
 
@@ -189,6 +220,16 @@ class Heuristic:
 
                 self._update_C(t)
                 self._update_D()
+
+    def get_objective_value(self):
+        solutions = list(self.solutions.values())
+        total_weighted_completion_time = calculate_total_weighted_completion_time(solutions)
+        deviation_from_earlier_plan = calculate_deviation_from_earlier_plan(solutions)
+        total_tardiness = calculate_total_weighted_tardiness(solutions)
+
+        return self.parameters.alpha_completion_time * total_weighted_completion_time + \
+            self.parameters.alpha_robust * deviation_from_earlier_plan + \
+            self.parameters.alpha_tardiness * total_tardiness
 
     def write_solution(self, scenario, output_path: str):
         for job_object in scenario['jobs']:

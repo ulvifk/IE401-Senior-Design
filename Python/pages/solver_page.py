@@ -115,11 +115,11 @@ def solver_page():
 
     col_1, col_2, col_3 = st.columns([1, 1, 1])
     with col_1:
-        parameters.alpha_completion_time = st.number_input("Alpha completion time", value=1.0)
+        heuristic.alpha_completion_time = st.number_input("Alpha completion time", value=1.0)
     with col_2:
-        parameters.alpha_tardiness = st.number_input("Alpha tardiness", value=10.0)
+        heuristic.alpha_tardiness = st.number_input("Alpha tardiness", value=10.0)
     with col_3:
-        parameters.alpha_robust = st.number_input("Alpha deviation", value=0.1)
+        heuristic.alpha_deviation = st.number_input("Alpha deviation", value=0.1)
 
     with st.sidebar:
         job_name = st.selectbox("Job", list(job_map.keys()))

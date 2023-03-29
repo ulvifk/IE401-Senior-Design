@@ -16,6 +16,8 @@ def calculate_total_weighted_completion_time(solutions: list[Solution]) -> float
 def calculate_deviation_from_earlier_plan(solutions: list[Solution]) -> float:
     total = 0
     for solution in solutions:
+        if solution.task.old_scheduled_time < 0:
+            continue
         deviation = solution.start_time - solution.task.old_scheduled_time
         total += np.power(deviation, 2)
 
@@ -34,9 +36,9 @@ def calculate_total_weighted_tardiness(solutions: list[Solution]) -> float:
 def write_stats(path: str, solutions: list[Solution], parameters: Parameters):
     stats = {}
     with open(path, "w") as file:
-        stats["total_weighted_completion_time"] = calculate_total_weighted_completion_time(solutions)
-        stats["deviation_from_earlier_plan"] = calculate_deviation_from_earlier_plan(solutions)
-        stats["total_tardiness"] = calculate_total_weighted_tardiness(solutions)
+        stats["total_weighted_completion_time"] = float(calculate_total_weighted_completion_time(solutions))
+        stats["deviation_from_earlier_plan"] = float(calculate_deviation_from_earlier_plan(solutions))
+        stats["total_tardiness"] = float(calculate_total_weighted_tardiness(solutions))
         stats["n_jobs"] = len(parameters.set_of_jobs)
         stats["n_tasks"] = len(parameters.set_of_tasks)
         stats["n_machines"] = len(parameters.set_of_machines)
