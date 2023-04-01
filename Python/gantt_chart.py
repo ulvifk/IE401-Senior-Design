@@ -79,7 +79,7 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
                              xref='paper',
                              yref='paper',
                              x=0,
-                             y=1.09,
+                             y=1.07,
                              bordercolor='black',
                              borderwidth=1)
 
@@ -90,7 +90,7 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
                              xref='paper',
                              yref='paper',
                              x=0,
-                             y=1.05,
+                             y=1.03,
                              bordercolor='black',
                              borderwidth=1)
 
@@ -98,8 +98,8 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
 
 
 if __name__ == "__main__":
-    for seed in [0]:
-        for n in [10]:
+    for seed in [1]:
+        for n in [15]:
             normal = f"solution_{seed}_{n}.json"
             stats = f"stats_{seed}_{n}.json"
             create_gantt_chart("Normal", normal, stats)

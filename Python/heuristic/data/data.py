@@ -24,6 +24,11 @@ class Task:
     preceding_task_id: int
     succeeding_task_id: int
     old_scheduled_time: float
+    heuristic_special_score: float
+    average_processing_time: float
+    required_time: float
+    earliest_start_time: float | None
+    processing_times_by_id: dict[int, float]
 
     def __init__(self, id: int, processing_time, preceding_task_id: int, succeeding_task_id: int, job: Job, priority,
                  old_scheduled_time):
@@ -38,6 +43,9 @@ class Task:
         self.preceding_task_id = preceding_task_id
         self.succeeding_task_id = succeeding_task_id
         self.old_scheduled_time = old_scheduled_time
+        self.heuristic_special_score = 0
+        self.processing_times_by_id = {}
+        self.earliest_start_time = 0 if self.preceding_task_id == -1 else None
 
 class Job:
     id: int

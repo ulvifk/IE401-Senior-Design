@@ -1,10 +1,12 @@
 import numpy as np
 
-from heuristic import *
-from heuristic.data import Parameters
+from Python.heuristic.data import Parameters
 from .particle import Particle
 from tqdm import tqdm
 from matplotlib import pyplot as plt
+
+from Python.heuristic import Heuristic
+from Python.heuristic.heuristic_v2 import HeuristicV2
 
 
 class ParticleSwarm:
@@ -18,7 +20,7 @@ class ParticleSwarm:
     _min_position: np.array
 
     _parameters: Parameters
-    _heuristic: Heuristic
+    _heuristic: Heuristic | HeuristicV2
 
     def __init__(self, n_particle: int, inertia: float, c1: float, c2: float, position_max: np.array,
                  position_min: np.array,
@@ -37,16 +39,21 @@ class ParticleSwarm:
         self._initialize_particles(n_particle, position_max, position_min)
 
     def optimize(self, n_iteration: int, output_path: str, stats_path: str):
-        for i in tqdm(range(n_iteration)):
+
+        pbar = tqdm(range(n_iteration), desc="Particle swarm", postfix=f"Best score: {self.best_score}")
+        for n in pbar:
             for particle in self.particles:
                 velocity = self.inertia * particle.velocity + self.c1 * np.random.uniform(0, 1) * (
                         particle.best_position - particle.position) + self.c2 * np.random.uniform(0, 1) * (
                                    self.best_position - particle.position)
 
                 particle.velocity = velocity
+                for i in range(len(particle.velocity)):
+                    if particle.velocity[i] + particle.position[i] > self._max_position[i] or \
+                            particle.velocity[i] + particle.position[i] < self._min_position[i]:
+                        particle.velocity[i] = -particle.velocity[i] / 2
+
                 particle.position = particle.position + velocity
-                particle.position = np.maximum(particle.position, self._min_position)
-                particle.position = np.minimum(particle.position, self._max_position)
 
                 score = self._score(particle)
                 if score < particle.best_score:
@@ -59,11 +66,8 @@ class ParticleSwarm:
                     self._heuristic.write_solution(self._parameters.scenario, output_path)
                     self._heuristic.write_stats(stats_path)
 
-                    print(f"New best score: {self.best_score}")
-                    print(f"New best position: {self.best_position}")
-
-            if i % 1 == 0:
-                self._add_particle()
+                    pbar.set_postfix({"Best score": self.best_score,
+                                     "Found at iteration": n})
 
     def _add_particle(self):
         position = np.random.uniform(self._min_position, self._max_position)
@@ -78,7 +82,7 @@ class ParticleSwarm:
         plt.show()
 
     def _score(self, particle: Particle) -> float:
-        self._heuristic = Heuristic(self._parameters)
+        self._heuristic.reset()
         self._heuristic.alpha_tardiness = particle.position[0]
         self._heuristic.alpha_deviation = particle.position[1]
         self._heuristic.alpha_completion_time = particle.position[2]

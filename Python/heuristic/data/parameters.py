@@ -79,11 +79,42 @@ class Parameters:
                 for mac in machines_can_undertake:
                     mac.set_of_assigned_tasks.append(t)
                     t.processing_times[mac] = processing_time * mac.processing_time_constant
+                    t.processing_times_by_id[mac.id] = processing_time * mac.processing_time_constant
+
+                t.average_processing_time = sum(t.processing_times.values()) / len(t.processing_times)
+                required_time = 0
+                current_task = t
+                while current_task.succeeding_task != None:
+                    current_task = current_task.succeeding_task
+
+                    average_processing_time = current_task.average_processing_time
+
+                    required_time += average_processing_time
+                t.required_time = required_time
 
                 self.set_of_tasks.append(t)
                 self.set_of_jobs[-1].tasks.append(t)
 
         self._find_precedence_relations()
+        self._sort_precedence_relations()
+
+    def _sort_machines(self):
+        machines = sorted(self.set_of_machines, key=lambda x: x.id)
+
+    def _sort_precedence_relations(self):
+        for job in self.set_of_jobs:
+            sorted_order = []
+            for task in job.tasks:
+                if task.preceding_task == None:
+                    sorted_order.append(task)
+                    break
+
+            current_task = sorted_order[0]
+            while current_task.succeeding_task is not None:
+                current_task = current_task.succeeding_task
+                sorted_order.append(current_task)
+
+            job.tasks = sorted_order
 
     def _find_precedence_relations(self):
         for task in self.set_of_tasks:

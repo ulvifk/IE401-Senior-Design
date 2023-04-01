@@ -8,6 +8,8 @@ from .solution import Solution
 from .stats import *
 
 class Heuristic:
+    np.random.seed(1)
+
     slack: float
     parameters: Parameters
     unscheduled_tasks: list[Task]
@@ -30,6 +32,12 @@ class Heuristic:
     medium_priority: float
     low_priority: float
 
+    _priorities: np.array
+    _last_task_coeffs: np.array
+    _earlier_plan: np.array
+    _earlier_plan_coeffs: np.array
+    _deadlines: np.array
+
     def __init__(self, parameters: Parameters):
         self.parameters = parameters
         self.unscheduled_tasks = parameters.set_of_tasks.copy()
@@ -41,15 +49,38 @@ class Heuristic:
         self.I = {machine: 0 for machine in self.M}
         self.solutions = {}
 
+        self.alpha_tardiness = 10
+        self.alpha_deviation = 0.1
+        self.alpha_completion_time = 1
         self.slack = 2
         self.tightness_window = 30
         self.tardiness_pow = 2
-        self.deviation_pow = 2
+        self.deviation_pow = 1
         self.time_pow = 1
 
-        self.high_priority = 16
+        self.high_priority = 4
         self.medium_priority = 4
         self.low_priority = 1
+
+        self._priorities = np.zeros(len(parameters.set_of_tasks))
+        for task in parameters.set_of_tasks:
+            self._priorities[task.id - 1] = task.priority
+
+        self._last_task_coeffs = np.zeros(len(parameters.set_of_tasks))
+        for job in parameters.set_of_jobs:
+            last_task = job.tasks[-1]
+            self._last_task_coeffs[last_task.id - 1] = 1
+
+        self._earlier_plan = np.zeros(len(parameters.set_of_tasks))
+        self._earlier_plan_coeffs = np.zeros(len(parameters.set_of_tasks))
+        for task in parameters.set_of_tasks:
+            if task.old_scheduled_time > -1:
+                self._earlier_plan[task.id - 1] = task.old_scheduled_time
+                self._earlier_plan_coeffs[task.id - 1] = 1
+
+        self._deadlines = np.zeros(len(parameters.set_of_tasks))
+        for task in parameters.set_of_tasks:
+            self._deadlines[task.id - 1] = task.job.deadline
 
     def reset(self):
         self.unscheduled_tasks = self.parameters.set_of_tasks.copy()
@@ -74,36 +105,27 @@ class Heuristic:
     def _tardiness_score(self, task: Task, machine: Machine, time: float) -> float:
         slack = task.job.deadline - (time + task.processing_times[machine])
 
-        required_time = 0
-        current_task = task
-        while current_task.succeeding_task != None:
-            current_task = current_task.succeeding_task
-
-            processing_times = [current_task.processing_times[machine] for machine in current_task.machines_can_undertake]
-            average_processing_time = sum(processing_times) / len(processing_times)
-
-            required_time += average_processing_time
-
-        slack = slack - required_time
+        slack = slack - task.required_time
         penalty = max(0, self.tightness_window-slack)
 
-        return np.power(penalty, self.tardiness_pow)
+        return pow(penalty, self.tardiness_pow)
 
     def _time_score(self, time, task: Task, machine: Machine) -> float:
-        return -np.power((time + task.processing_times[machine]), self.time_pow)
+        return -pow((time + task.processing_times[machine]), self.time_pow)
 
     def _deviation_score(self, task: Task, time: float) -> float:
         if task.old_scheduled_time < 0:
             return 0
 
-        return np.power(task.old_scheduled_time - time, self.deviation_pow)
+        return pow(task.old_scheduled_time - time, self.deviation_pow)
 
     def _calculate_score(self, task: Task, machine: Machine, time: float) -> float:
         tardiness_score = self.alpha_tardiness * self._tardiness_score(task, machine, time)
         time_score = self.alpha_completion_time * self._time_score(time, task, machine)
         deviation_score = self.alpha_deviation * self._deviation_score(task, time)
+        score = self._get_priority(task) * (tardiness_score + time_score + deviation_score)
 
-        return self._get_priority(task) * (tardiness_score + time_score + deviation_score)
+        return score
 
     def _remove_redundant_machines(self):
         machines_to_remove = []
@@ -155,14 +177,14 @@ class Heuristic:
         return new_machine_list
 
     def _update_C(self, t):
-        self.C = []
+        self.C.clear()
         for task in self.H:
             end_time = self.solutions[task].end_time
             if end_time <= t + self.slack:
                 self.C.append(task)
 
     def _update_D(self):
-        self.D = []
+        self.D.clear()
 
         for task in self.unscheduled_tasks:
             is_found = False
@@ -221,6 +243,7 @@ class Heuristic:
                 self._update_C(t)
                 self._update_D()
 
+
     def get_objective_value(self):
         solutions = list(self.solutions.values())
         total_weighted_completion_time = calculate_total_weighted_completion_time(solutions)
@@ -250,10 +273,10 @@ class Heuristic:
                         break
 
                 solution = self.solutions[task]
-                task_object['scheduled_start_time'] = solution.start_time
-                task_object['scheduled_end_time'] = solution.end_time
-                task_object['scheduled_machine'] = solution.machine.id
-                task_object['score'] = solution.score
+                task_object['scheduled_start_time'] = float(solution.start_time)
+                task_object['scheduled_end_time'] = float(solution.end_time)
+                task_object['scheduled_machine'] = float(solution.machine.id)
+                task_object['score'] = float(solution.score)
 
         with open(output_path, 'w') as output_file:
             json.dump(scenario, output_file)
@@ -261,4 +284,113 @@ class Heuristic:
     def write_stats(self, path):
         write_stats(path, list(self.solutions.values()), self.parameters)
 
+    def _calculate_weighted_tardiness(self, end_times: np.array):
+        penalty = (end_times - self._deadlines) * self._last_task_coeffs
+        penalty = np.maximum(penalty, 0)
+        penalty = penalty * penalty
+        penalty = penalty * self._priorities
+        return np.sum(penalty)
+
+    def _calculate_weighted_total_completion_time(self, end_times: np.array):
+        penalty = end_times * self._last_task_coeffs
+        penalty = penalty * self._priorities
+        return np.sum(penalty)
+
+    def _calculate_deviation_from_earlier_plan(self, start_times: np.array):
+        penalty = start_times - self._earlier_plan
+        penalty = penalty * self._earlier_plan_coeffs
+        penalty = penalty * penalty
+        return np.sum(penalty)
+
+    def _find_neighbor_solution(self, task_id: int, start_times: np.array, end_times: np.array, machines: np.array,
+                                _machine_predecessors: dict[int, Task], _job_predecessors: dict[int, Task]):
+        start_times = start_times.copy()
+        end_times = end_times.copy()
+        machines = machines.copy()
+        machine_predecessors = {}
+        for key, value in _machine_predecessors.items():
+            machine_predecessors[key] = value
+
+        machine_predecessor = machine_predecessors[task_id]
+        machine_predecessor_id = machine_predecessor.id if machine_predecessor is not None else -1
+        if machine_predecessor_id == -1:
+            return start_times, end_times, machines, machine_predecessors
+
+        machine_id = machines[task_id - 1]
+
+        task = self.parameters.set_of_tasks[task_id - 1]
+
+        job_predecessor = task.preceding_task
+        job_predecessor_id = job_predecessor.id if job_predecessor is not None else -1
+
+        job_predecessor_end_time = end_times[job_predecessor_id - 1] if job_predecessor_id != -1 else 0
+        machine_predecessor_start_time = end_times[machine_predecessors[machine_predecessor_id] - 1]
+
+        earliest_start_time = np.max([job_predecessor_end_time, machine_predecessor_start_time])
+        end_time = earliest_start_time + task.processing_times_by_id[machine_id]
+
+        start_times[task_id - 1] = earliest_start_time
+        end_times[task_id - 1] = end_time
+
+        start_times[machine_predecessor_id - 1] = end_time
+        end_times[machine_predecessor_id - 1] = end_time + machine_predecessor.processing_times_by_id[machine_id]
+
+        machine_predecessors[task_id] = machine_predecessors[machine_predecessor_id]
+        machine_predecessors[machine_predecessor_id] = task_id
+
+        return start_times, end_times, machines, machine_predecessors
+
+    def _score(self, start_times, end_times):
+        weighted_tardiness = self._calculate_weighted_tardiness(end_times)
+        deviation_from_earlier_plan = self._calculate_deviation_from_earlier_plan(start_times)
+        weighted_total_completion_time = self._calculate_weighted_total_completion_time(end_times)
+
+        score = self.parameters.alpha_tardiness * weighted_tardiness + \
+                self.parameters.alpha_robust * deviation_from_earlier_plan + \
+                self.parameters.alpha_completion_time * weighted_total_completion_time
+
+        return score
+
+    def improve(self):
+        start_times = np.zeros(len(self.parameters.set_of_tasks))
+        end_times = np.zeros(len(self.parameters.set_of_tasks))
+        machines = np.zeros(len(self.parameters.set_of_tasks), dtype=int)
+
+        for task, solution in self.solutions.items():
+            start_times[task.id - 1] = solution.start_time
+            end_times[task.id - 1] = solution.end_time
+            machines[task.id - 1] = solution.machine.id
+
+        machine_predecessors = {}
+        machine_ordering = {machine: [] for machine in self.parameters.set_of_machines}
+        for solution in self.solutions.values():
+            machine_ordering[solution.machine].append(solution.task)
+        for ordering in machine_ordering.values():
+            ordering.sort(key=lambda x: start_times[x.id - 1])
+
+        for machine, ordering in machine_ordering.items():
+            for i in range(len(ordering) - 1):
+                machine_predecessors[ordering[i + 1].id] = ordering[i].id
+            machine_predecessors[ordering[0].id] = -1
+
+        best_score = self._score(start_times, end_times)
+
+        for i in range(200):
+            task_id = np.random.randint(1, len(self.parameters.set_of_tasks) + 1)
+            task = self.parameters.set_of_tasks[task_id - 1]
+            start_times_1, end_times_1, machines_1, machine_predecessors_1 = self._find_neighbor_solution(task_id, start_times, end_times, machines, machine_predecessors)
+
+            score_1 = self._score(start_times_1, end_times_1)
+
+            if score_1 < best_score:
+                start_times = start_times_1
+                end_times = end_times_1
+                machines = machines_1
+                machine_predecessors = machine_predecessors_1
+                best_score = score_1
+                continue
+
+        for solution in self.solutions.values():
+            solution.start_time = start_times[solution.task.id - 1]
+            solution.end_time = end_times[solution.task.id - 1]
 
