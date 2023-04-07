@@ -21,7 +21,7 @@ import java.util.ListIterator;
 import java.util.Map;
 
 public class Heuristic {
-    private final int slack = 5;
+    private final int slack = 2;
     private final Parameters parameters;
     private final List<Task> unscheduledTasks;
     private final List<Machine> M;
@@ -31,6 +31,10 @@ public class Heuristic {
     private List<Machine> W;
     private final Map<Machine, Double> I;
     private final Map<Task, Solution> solutions;
+    public double totalWeightedCompletionTime;
+    public double totalDeviation;
+    public double totalWeightedTardiness;
+    public double objective;
 
     public Heuristic(Parameters parameters) {
         this.parameters = parameters;
@@ -254,6 +258,13 @@ public class Heuristic {
                 this.updateD();
             }
         }
+
+        this.totalWeightedCompletionTime = ScenarioUpdater.calculateTotalWeightedCompletionTime(solutions);
+        this.totalDeviation = ScenarioUpdater.calculateDeviationFromEarlierPlan(solutions);
+        this.totalWeightedTardiness = ScenarioUpdater.calculateTotalWeightedTardiness(solutions);
+        this.objective = this.parameters.getAlphaRobust() * this.totalDeviation +
+                this.parameters.getAlphaTardiness() * this.totalWeightedTardiness +
+                this.parameters.getAlphaCompletionTime() * this.totalWeightedCompletionTime;
     }
 
     public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {

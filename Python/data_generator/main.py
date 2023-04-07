@@ -2,8 +2,7 @@ import json
 import random
 
 import numpy as np
-
-from j
+from data_generator import Task, Job, Machine
 from task_type import TASK_TYPE
 
 
@@ -88,7 +87,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
     average_machine = np.mean([len(machines[task_type]) for task_type in TASK_TYPE])
     n_task = sum([len(job.tasks) for job in list_of_jobs])
     for job in list_of_jobs:
-        deadline_factor = pow(n_task, 1 / 3) / (average_machine + 1) * 1.2
+        deadline_factor = pow(n_task, 1 / 3) / (average_machine + 1) * 1.4
         deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
         deadline_std = deadline_mean * deadline_std_factor
         deadline = np.round(np.random.normal(deadline_mean, deadline_std))
@@ -121,7 +120,7 @@ if __name__ == "__main__":
     n_machine = 5
 
     for seed in [0, 1, 2]:
-        for n_job in [5, 10, 15]:
+        for n_job in [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:
             scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
                                                 processing_mean=10, processing_std=4,
                                                 deadline_factor=2.25, deadline_std_factor=0.1,

@@ -19,6 +19,7 @@ public class Task {
     private final int succeedingTaskId;
     private final int oldScheduleTime;
     private final Machine oldScheduleMachine;
+    private double averageProcessingTime;
 
     public Task(int id, double processingTime, int precedingTaskId,
                 int succeedingTaskId, Job jobWhichBelongs, double priority, int oldScheduleTime, Machine oldScheduledMachine) {
@@ -101,5 +102,17 @@ public class Task {
 
     public void addDiscretizedProcessingTime(Machine machine, int discretizedProcessingTime) {
         this.discretizedProcessingTimes.put(machine, discretizedProcessingTime);
+    }
+
+    public double getAverageProcessingTime() {
+        return averageProcessingTime;
+    }
+
+    public void setAverageProcessingTime(double averageProcessingTime) {
+        this.averageProcessingTime = averageProcessingTime;
+    }
+
+    public Map<Machine, Double> getProcessingTimes() {
+        return processingTimes;
     }
 }

@@ -18,12 +18,13 @@ public class Parameters {
     private final double alphaTardiness = 10;
     private final double alphaRobust = 0.1;
 
-    private final int timeWindowLength = 1;
+    private final int timeWindowLength;
 
-    public Parameters(){
+    public Parameters(int timeWindowLength) {
         this.setOfJobs = new ArrayList<>();
         this.setOfTasks = new ArrayList<>();
         this.setOfMachines = new ArrayList<>();
+        this.timeWindowLength = timeWindowLength;
         this.finalTimePoint = getRoundUpToClosestFactor(this.finalTimePoint);
     }
     public void readData(String jsonPath) throws Exception {
@@ -107,6 +108,15 @@ public class Parameters {
         }
 
         findPrecedenceRelationTasks();
+
+        for (Task task : this.setOfTasks){
+            double avgProcessingTime = task.getProcessingTimes().values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            task.setAverageProcessingTime(avgProcessingTime);
+        }
+
+        double totalProcessingTime = this.setOfTasks.stream().mapToDouble(Task::getAverageProcessingTime).sum();
+        this.finalTimePoint = getRoundUpToClosestFactor(totalProcessingTime / this.setOfMachines.size() * 2.5);
+        int x= 0;
     }
 
     private void findPrecedenceRelationTasks(){
@@ -126,11 +136,11 @@ public class Parameters {
     }
 
     public int getRoundUpToClosestFactor(double val){
-        return (int) (Math.ceil(val / this.timeWindowLength) * this.timeWindowLength);
+        return (int) (Math.ceil(val / this.timeWindowLength));
     }
 
     public int getRoundToClosestFactor(double val){
-        return (int) (Math.round(val / this.timeWindowLength) * this.timeWindowLength);
+        return (int) (Math.round(val / this.timeWindowLength));
     }
 
     public int getRoundDownToClosestFactor(double val){
@@ -163,5 +173,9 @@ public class Parameters {
 
     public double getAlphaTardiness() {
         return alphaTardiness;
+    }
+
+    public int getTimeWindowLength() {
+        return timeWindowLength;
     }
 }

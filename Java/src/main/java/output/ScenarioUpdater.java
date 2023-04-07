@@ -11,12 +11,14 @@ import data.Task;
 import gurobi.GRB;
 import gurobi.GRBException;
 import gurobi.GRBVar;
+import heuristic.Pair;
 import heuristic.Solution;
 import model.Variables;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,10 +33,7 @@ public class ScenarioUpdater {
 
         JsonArray jobsArray = jsonObject.getAsJsonArray("jobs");
 
-        testPrint(parameters, variables);
-        Map<Task, Double> startTimes = getStartTime(parameters, variables);
-
-        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
+        Map<Task, Solution> solutions = revokeDiscretiziation(parameters, variables);
 
         for(JsonElement jobElement : jobsArray){
             JsonObject jobObject = jobElement.getAsJsonObject();
@@ -48,14 +47,16 @@ public class ScenarioUpdater {
 
                 Task task = job.getTasks().stream().filter(task1 -> task1.getId() == taskId).findAny().orElse(null);
 
+                Solution solution = solutions.get(task);
+
                 taskObject.remove("scheduled_start_time");
-                taskObject.addProperty("scheduled_start_time", startTimes.get(task));
+                taskObject.addProperty("scheduled_start_time", solution.getStartTime());
 
                 taskObject.remove("scheduled_end_time");
-                taskObject.addProperty("scheduled_end_time", startTimes.get(task) + task.getProcessingTime(machineMap.get(task)));
+                taskObject.addProperty("scheduled_end_time", solution.getFinishTime());
 
                 taskObject.remove("scheduled_machine");
-                taskObject.addProperty("scheduled_machine", machineMap.get(task).getId());
+                taskObject.addProperty("scheduled_machine", solution.getMachine().getId());
 
                 taskObject.addProperty("score", 0);
             }
@@ -65,61 +66,6 @@ public class ScenarioUpdater {
         PrintWriter out = new PrintWriter(outputPath);
         out.println(scenario);
         out.close();
-    }
-
-    private static void testPrint(Parameters parameters, Variables variables) throws GRBException {
-        Machine machine = parameters.getSetOfMachines().get(0);
-        for(int t = 0; t<=parameters.getFinalTimePoint(); t++){
-            for(Task i : machine.getSetOfAssignedTasks()){
-                for (Machine k : i.getMachinesCanUndertake()) {
-                    if (variables.getZ().get(i).get(k).get(t).get(GRB.DoubleAttr.X) > 0.5) {
-                        System.out.printf("Task_%d, Time_%d%n", i.getId(), t);
-                    }
-                }
-            }
-        }
-    }
-
-    private static Map<Task, Machine> getMachineMap(Parameters parameters, Variables variables) throws GRBException {
-        Map<Task, Machine> machineMap = new HashMap<>();
-        for (Task i : parameters.getSetOfTasks()) {
-            for (Machine k : i.getMachinesCanUndertake()) {
-                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
-                    if (variables.getZ().get(i).get(k).get(t).get(GRB.DoubleAttr.X) > 0.5) {
-                        machineMap.put(i, k);
-                    }
-                }
-            }
-        }
-        return machineMap;
-    }
-
-    private static Map<Task, Double> getStartTime(Parameters parameters, Variables variables) throws GRBException {
-        Map<Task, Double> startTime = new HashMap<>();
-
-        Map<Task, Double> determinedTasks = new HashMap<>();
-        List<Task> undeterminedTasks = new LinkedList<>(parameters.getSetOfTasks());
-        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
-
-        while (undeterminedTasks.size() > 0){
-            ListIterator<Task> undeterminedTaskIterator = undeterminedTasks.listIterator();
-            while (undeterminedTaskIterator.hasNext()) {
-                Task task = undeterminedTaskIterator.next();
-
-                Task precedingTask = task.getPrecedingTask();
-                if (precedingTask != null && !determinedTasks.containsKey(precedingTask)) continue;
-                Task beforeTask = getBeforeTask(task, variables);
-                if (beforeTask != null && !determinedTasks.containsKey(beforeTask)) continue;
-
-                double precedingTaskEnd = precedingTask != null ? determinedTasks.get(precedingTask) + precedingTask.getProcessingTime(machineMap.get(precedingTask)) : 0;
-                double beforeTaskEnd = beforeTask != null ? determinedTasks.get(beforeTask) + beforeTask.getProcessingTime(machineMap.get(beforeTask)) : 0;
-
-                determinedTasks.put(task, Math.max(precedingTaskEnd, beforeTaskEnd));
-                undeterminedTaskIterator.remove();
-            }
-        }
-
-        return determinedTasks;
     }
 
     public static double calculateTotalWeightedCompletionTime(Map<Task, Solution> solutions) {
@@ -159,13 +105,82 @@ public class ScenarioUpdater {
         return totalTardiness;
     }
 
-    public static Map<Task, Solution> getSolutionMap(Parameters parameters, Variables variables) throws GRBException {
-        Map<Task, Machine> machineMap = getMachineMap(parameters, variables);
-        Map<Task, Double> startTimes = getStartTime(parameters, variables);
+    public static Map<Task, Solution> revokeDiscretiziation(Parameters parameters, Variables variables) throws GRBException {
+        Map<Task, Pair<Machine, Integer>> taskMapping = new HashMap<>();
+        Map<Machine, List<Task>> machineOrderings = new HashMap<>();
+        for (Machine machine : parameters.getSetOfMachines()){
+            machineOrderings.put(machine, new LinkedList<>());
+        }
+
+        for (Task task : variables.getZ().keySet()){
+            for (Machine machine : variables.getZ().get(task).keySet()){
+                for (int t : variables.getZ().get(task).get(machine).keySet()){
+                    if (variables.getZ().get(task).get(machine).get(t).get(GRB.DoubleAttr.X) > 0.5){
+                        taskMapping.put(task, new Pair<>(machine, t));
+                    }
+                }
+            }
+        }
+
+        for (Task task : taskMapping.keySet()){
+            Pair<Machine, Integer> pair = taskMapping.get(task);
+            Machine machine = pair.first;
+
+            if (!machineOrderings.containsKey(machine)){
+                machineOrderings.put(machine, new LinkedList<>());
+            }
+
+            machineOrderings.get(machine).add(task);
+        }
+
+        for (Machine machine : machineOrderings.keySet()){
+            List<Task> taskList = machineOrderings.get(machine);
+            taskList.sort(Comparator.comparing(t -> taskMapping.get(t).second));
+        }
+
+        Map<Task, Task> machinePredecessors = new HashMap<>();
+        for (Machine machine : machineOrderings.keySet()){
+            List<Task> tasks = machineOrderings.get(machine);
+            if (tasks.size() == 0) continue;
+            machinePredecessors.put(tasks.get(0), null);
+            for (int i = 0; i < tasks.size() - 1; i++){
+                Task task = tasks.get(i);
+                Task nextTask = tasks.get(i + 1);
+                machinePredecessors.put(nextTask, task);
+            }
+        }
+
+        List<Task> unassignedTasks = new LinkedList<>(parameters.getSetOfTasks());
+        Map<Task, Double> startTimes = new HashMap<>();
+        Map<Task, Double> endTimes = new HashMap<>();
+
+        while (unassignedTasks.size() > 0){
+            ListIterator<Task> iterator = unassignedTasks.listIterator();
+            while (iterator.hasNext()){
+                Task task = iterator.next();
+                Task jobPredecessor = task.getPrecedingTask();
+                Task machinePredecessor = machinePredecessors.get(task);
+                Machine machine = taskMapping.get(task).first;
+
+                if (jobPredecessor != null && !endTimes.containsKey(jobPredecessor)) continue;
+                if (machinePredecessor != null && !endTimes.containsKey(machinePredecessor)) continue;
+
+                double jobPredecessorTime = jobPredecessor != null ? endTimes.get(jobPredecessor) : 0;
+                double machinePredecessorTime = machinePredecessor != null ? endTimes.get(machinePredecessor) : 0;
+
+                double startTime = Math.max(jobPredecessorTime, machinePredecessorTime);
+                double endTime = startTime + task.getProcessingTime(machine);
+
+                startTimes.put(task, startTime);
+                endTimes.put(task, endTime);
+
+                iterator.remove();
+            }
+        }
+
         Map<Task, Solution> solutions = new HashMap<>();
         for (Task task : parameters.getSetOfTasks()){
-            solutions.put(task, new Solution(task, machineMap.get(task), startTimes.get(task),
-                    startTimes.get(task) + task.getProcessingTime(machineMap.get(task))));
+            solutions.put(task, new Solution(task, taskMapping.get(task).first, startTimes.get(task), endTimes.get(task)));
         }
 
         return solutions;
@@ -180,6 +195,7 @@ public class ScenarioUpdater {
         jsonObject.addProperty("n_jobs", parameters.getSetOfJobs().size());
         jsonObject.addProperty("n_machines", parameters.getSetOfMachines().size());
         jsonObject.addProperty("n_tasks", parameters.getSetOfTasks().size());
+        jsonObject.addProperty("increment", parameters.getTimeWindowLength());
 
 
         String stats = jsonObject.toString();
