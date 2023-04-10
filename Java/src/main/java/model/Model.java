@@ -8,6 +8,7 @@ import data.Machine;
 import data.Parameters;
 import data.Task;
 import gurobi.GRB;
+import gurobi.GRBConstr;
 import gurobi.GRBEnv;
 import gurobi.GRBException;
 import gurobi.GRBModel;
@@ -53,23 +54,44 @@ public class Model {
         Objective.setObjective(model, parameters, variables);
     }
 
-    public void optimize(int timeLimit, boolean isWriteLp) throws GRBException {
+    public void optimize(int timeLimit, boolean isWriteLp, String logPath) throws GRBException {
         model.set(GRB.DoubleParam.TimeLimit, timeLimit);
 
         if(isWriteLp)
             model.write("model.lp");
 
+        model.set(GRB.StringParam.LogFile, logPath);
+
         model.optimize();
 
-        Map<Task, Solution> solutions = ScenarioUpdater.revokeDiscretiziation(parameters, variables);
-        this.totalWeightedCompletionTime = ScenarioUpdater.calculateTotalWeightedCompletionTime(solutions);
-        this.totalDeviation = ScenarioUpdater.calculateDeviationFromEarlierPlan(solutions);
-        this.totalWeightedTardiness = ScenarioUpdater.calculateTotalWeightedTardiness(solutions);
-        this.objective = this.parameters.getAlphaRobust() * this.totalDeviation +
-                this.parameters.getAlphaTardiness() * this.totalWeightedTardiness +
-                this.parameters.getAlphaCompletionTime() * this.totalWeightedCompletionTime;
-        this.gap = model.get(GRB.DoubleAttr.MIPGap);
-        this.cpuTime = model.get(GRB.DoubleAttr.Runtime);
+        if (model.get(GRB.IntAttr.Status) == GRB.Status.INFEASIBLE) {
+            model.computeIIS();
+            for (GRBConstr c : model.getConstrs()) {
+                if (c.get(GRB.IntAttr.IISConstr) == 1) {
+                    System.out.println(c.get(GRB.StringAttr.ConstrName));
+                }
+            }
+        }
+
+        if (model.get(GRB.IntAttr.SolCount) > 0) {
+            Map<Task, Solution> solutions = ScenarioUpdater.revokeDiscretiziation(parameters, variables);
+            this.totalWeightedCompletionTime = ScenarioUpdater.calculateTotalWeightedCompletionTime(solutions);
+            this.totalDeviation = ScenarioUpdater.calculateDeviationFromEarlierPlan(solutions);
+            this.totalWeightedTardiness = ScenarioUpdater.calculateTotalWeightedTardiness(solutions);
+            this.objective = this.parameters.getAlphaRobust() * this.totalDeviation +
+                    this.parameters.getAlphaTardiness() * this.totalWeightedTardiness +
+                    this.parameters.getAlphaCompletionTime() * this.totalWeightedCompletionTime;
+            this.gap = model.get(GRB.DoubleAttr.MIPGap);
+            this.cpuTime = model.get(GRB.DoubleAttr.Runtime);
+        }
+        else {
+            this.totalWeightedCompletionTime = 0;
+            this.totalDeviation = 0;
+            this.totalWeightedTardiness = 0;
+            this.objective = 0;
+            this.gap = 0;
+            this.cpuTime = 0;
+        }
     }
 
     public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {
@@ -202,6 +224,41 @@ public class Model {
             int endTime = discreteEndTimes.get(task);
             Machine machine = taskMapping.get(task).first;
 
+            variables.getZ().get(task).get(machine).get(startTime).set(GRB.DoubleAttr.Start, 1.0);
+        }
+    }
+
+    public void feedSolution2(String solutionPath) throws FileNotFoundException, GRBException {
+        FileReader reader = new FileReader(solutionPath);
+
+        JsonElement solutionElement = JsonParser.parseReader(reader);
+        JsonObject solutionObject = solutionElement.getAsJsonObject();
+
+        Map<Task, Pair<Machine, Integer>> taskMapping = new HashMap<>();
+
+        JsonArray jobsArray = solutionObject.get("jobs").getAsJsonArray();
+        for (JsonElement jobElement : jobsArray){
+            JsonObject jobObject = jobElement.getAsJsonObject();
+            int jobId = jobObject.get("id").getAsInt();
+            JsonArray tasksArray = jobObject.get("tasks").getAsJsonArray();
+            for (JsonElement taskElement : tasksArray){
+                JsonObject taskObject = taskElement.getAsJsonObject();
+                int taskId = taskObject.get("id").getAsInt();
+                int machineId = taskObject.get("scheduled_machine").getAsInt();
+                int startTime = taskObject.get("scheduled_start_time").getAsInt();
+                int endTime = taskObject.get("scheduled_end_time").getAsInt();
+
+                Task task = parameters.getSetOfTasks().stream().filter(t -> t.getId() == taskId).findFirst().orElseThrow();
+                Machine machine = parameters.getSetOfMachines().stream().filter(m -> m.getId() == machineId).findFirst().orElseThrow();
+
+                taskMapping.put(task, new Pair<>(machine, startTime));
+            }
+        }
+
+        for (Task task : taskMapping.keySet()){
+            Pair<Machine, Integer> pair = taskMapping.get(task);
+            Machine machine = pair.first;
+            int startTime = pair.second;
             variables.getZ().get(task).get(machine).get(startTime).set(GRB.DoubleAttr.Start, 1.0);
         }
     }

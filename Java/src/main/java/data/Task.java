@@ -20,6 +20,7 @@ public class Task {
     private final int oldScheduleTime;
     private final Machine oldScheduleMachine;
     private double averageProcessingTime;
+    private double averageDiscreteProcessingTime;
 
     public Task(int id, double processingTime, int precedingTaskId,
                 int succeedingTaskId, Job jobWhichBelongs, double priority, int oldScheduleTime, Machine oldScheduledMachine) {
@@ -97,7 +98,7 @@ public class Task {
     }
 
     public void addProcessingTime(Machine machine) {
-        this.processingTimes.put(machine, this.processingTime * machine.getProcessingTimeConstant());
+        this.processingTimes.put(machine, (double)Math.round(this.processingTime * machine.getProcessingTimeConstant()));
     }
 
     public void addDiscretizedProcessingTime(Machine machine, int discretizedProcessingTime) {
@@ -114,5 +115,17 @@ public class Task {
 
     public Map<Machine, Double> getProcessingTimes() {
         return processingTimes;
+    }
+
+    public double getAverageDiscreteProcessingTime() {
+        return averageDiscreteProcessingTime;
+    }
+
+    public void setAverageDiscreteProcessingTime(double averageDiscreteProcessingTime) {
+        this.averageDiscreteProcessingTime = averageDiscreteProcessingTime;
+    }
+
+    public Map<Machine, Integer> getDiscretizedProcessingTimes() {
+        return discretizedProcessingTimes;
     }
 }

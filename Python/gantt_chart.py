@@ -98,12 +98,17 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
 
 
 if __name__ == "__main__":
-    for seed in [2]:
+    for seed in [0]:
         for n in [20]:
-            for inc in [10]:
-                normal = f"../Java/output/scenario_seed_{seed}_nJob_{n}/mip_increment_{inc}/model_solution.json"
-                stats = f"../Java/output/scenario_seed_{seed}_nJob_{n}/mip_increment_{inc}/model_stats.json"
-                create_gantt_chart("Normal", normal, stats)
+            for inc in [1, 2, 5, 10]:
+                for machine_count in [1]:
+                    #normal = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/heuristic/heuristic_solution.json"
+                    #stats = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/heuristic/heuristic_stats.json"
+                    #create_gantt_chart("Normal", normal, stats)
+
+                    normal = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_solution.json"
+                    stats = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_stats.json"
+                    create_gantt_chart("Normal", normal, stats)
 
 
 

@@ -9,15 +9,14 @@ from task_type import TASK_TYPE
 def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean: float, processing_std: float,
                              deadline_factor, deadline_std_factor,
                              low_p, medium_p, high_p,
-                             machine_seed, instance_seed):
+                             machine_seed, instance_seed, machine_count):
     random.seed(machine_seed)
     np.random.seed(machine_seed)
 
     machines: dict[TASK_TYPE, list[Machine]] = {}
     base_id = 1
     for task_type in TASK_TYPE:
-        ranges = [1, 2]
-        n_machine_for_task_type = np.random.choice(ranges)
+        n_machine_for_task_type = machine_count
         machines[task_type] = [Machine(id=base_id + i, task_type_undertakes=task_type, machine_name="",
                                        processing_time_constant=np.random.uniform(0.5, 1.5))
                                for i in range(n_machine_for_task_type)]
@@ -121,11 +120,12 @@ if __name__ == "__main__":
 
     for seed in [0, 1, 2]:
         for n_job in [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:
-            scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
-                                                processing_mean=10, processing_std=4,
-                                                deadline_factor=2.25, deadline_std_factor=0.1,
-                                                low_p=0.34, medium_p=0.33, high_p=0.33,
-                                                machine_seed=seed, instance_seed=seed)
+            for machine_count in [1, 2]:
+                scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
+                                                    processing_mean=10, processing_std=4,
+                                                    deadline_factor=2.25, deadline_std_factor=0.1,
+                                                    low_p=0.34, medium_p=0.33, high_p=0.33,
+                                                    machine_seed=seed, instance_seed=seed, machine_count=machine_count)
 
-            with open(f"../../Java/input/scenario_{seed}_{n_job}.json", "w") as f:
-                json.dump(scenario, f)
+                with open(f"../../Java/input/scenario_{seed}_{n_job}_{machine_count}.json", "w") as f:
+                    json.dump(scenario, f)

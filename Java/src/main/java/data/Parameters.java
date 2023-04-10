@@ -13,6 +13,7 @@ public class Parameters {
     private final ArrayList<Job> setOfJobs;
     private final ArrayList<Task> setOfTasks;
     private final ArrayList<Machine> setOfMachines;
+    private final List<Integer> setOfTimePoints;
     public int finalTimePoint = 250;
     private final double alphaCompletionTime = 1;
     private final double alphaTardiness = 10;
@@ -24,8 +25,9 @@ public class Parameters {
         this.setOfJobs = new ArrayList<>();
         this.setOfTasks = new ArrayList<>();
         this.setOfMachines = new ArrayList<>();
+        this.setOfTimePoints = new ArrayList<>();
         this.timeWindowLength = timeWindowLength;
-        this.finalTimePoint = getRoundUpToClosestFactor(this.finalTimePoint);
+        this.finalTimePoint = this.finalTimePoint;
     }
     public void readData(String jsonPath) throws Exception {
         FileReader reader = new FileReader(jsonPath);
@@ -97,7 +99,7 @@ public class Parameters {
 
                 for (Machine machine : task.getMachinesCanUndertake()) {
                     task.addProcessingTime(machine);
-                    task.addDiscretizedProcessingTime(machine, getRoundToClosestFactor(task.getProcessingTime(machine)));
+                    task.addDiscretizedProcessingTime(machine, this.getRoundToClosestFactor(task.getProcessingTime(machine)));
                 }
 
                 taskList.add(task);
@@ -111,12 +113,20 @@ public class Parameters {
 
         for (Task task : this.setOfTasks){
             double avgProcessingTime = task.getProcessingTimes().values().stream().mapToDouble(Double::doubleValue).average().orElse(0);
+            double avgDiscretizedProcessingTime = task.getDiscretizedProcessingTimes().values().stream().mapToDouble(Integer::doubleValue).average().orElse(0);
             task.setAverageProcessingTime(avgProcessingTime);
+            task.setAverageDiscreteProcessingTime(avgDiscretizedProcessingTime);
         }
 
-        double totalProcessingTime = this.setOfTasks.stream().mapToDouble(Task::getAverageProcessingTime).sum();
-        this.finalTimePoint = getRoundUpToClosestFactor(totalProcessingTime / this.setOfMachines.size() * 2.5);
-        int x= 0;
+        double totalProcessingTime = 0;
+        for (Task task : this.setOfTasks){
+            totalProcessingTime += this.getRoundUpToClosestFactor(task.getAverageProcessingTime());
+        }
+        this.finalTimePoint = (int) (totalProcessingTime / this.setOfMachines.size() * 2.2);
+
+        for (int t = 0; t <= this.finalTimePoint; t+=this.timeWindowLength) {
+            this.setOfTimePoints.add(t);
+        }
     }
 
     private void findPrecedenceRelationTasks(){
@@ -128,19 +138,23 @@ public class Parameters {
 
     public List<Integer> getSetOfTardyTimes(Task i, Machine k) {
         List<Integer> setOfTardyPoints = new ArrayList<>();
-        for (int t = (i.getJobWhichBelongs().getDeadline() - i.getProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
-             t <= this.finalTimePoint; t++) {
-            setOfTardyPoints.add(t);
+
+        int lowerBound = (i.getJobWhichBelongs().getDeadline() - i.getProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
+
+        for (int t : this.setOfTimePoints){
+            if (t >= lowerBound){
+                setOfTardyPoints.add(t);
+            }
         }
         return setOfTardyPoints;
     }
 
     public int getRoundUpToClosestFactor(double val){
-        return (int) (Math.ceil(val / this.timeWindowLength));
+        return (int) (Math.ceil(val / this.timeWindowLength) * this.timeWindowLength);
     }
 
     public int getRoundToClosestFactor(double val){
-        return (int) (Math.round(val / this.timeWindowLength));
+        return (int) (Math.round(val / this.timeWindowLength) * this.timeWindowLength);
     }
 
     public int getRoundDownToClosestFactor(double val){
@@ -177,5 +191,9 @@ public class Parameters {
 
     public int getTimeWindowLength() {
         return timeWindowLength;
+    }
+
+    public List<Integer> getSetOfTimePoints() {
+        return setOfTimePoints;
     }
 }

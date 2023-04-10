@@ -16,34 +16,38 @@ public class Objective {
         GRBLinExpr obj = new GRBLinExpr();
         for (Job job : parameters.getSetOfJobs()) {
             if (job.getTasks().size() == 0) continue;
-            Task lastTask = job.getTasks().get(job.getTasks().size() - 1);
-            for (Machine k : lastTask.getMachinesCanUndertake()) {
-                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
-                    double completionTime = t + lastTask.getProcessingTime(k);
-                    double priority = lastTask.getPriority();
+            for (Task lastTask : job.getTasks()) {
+                if (lastTask.getSucceedingTask() != null) continue;
+                for (Machine k : lastTask.getMachinesCanUndertake()) {
+                    for (int t : parameters.getSetOfTimePoints()) {
+                        double completionTime = t + lastTask.getProcessingTime(k);
+                        double priority = lastTask.getPriority();
 
-                    GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
-                    obj.addTerm(completionTime * priority * parameters.getAlphaCompletionTime(), var);
+                        GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
+                        obj.addTerm(completionTime * priority * parameters.getAlphaCompletionTime(), var);
+                    }
                 }
             }
         }
 
         for (Job job : parameters.getSetOfJobs()) {
             if (job.getTasks().size() == 0) continue;
-            Task lastTask = job.getTasks().get(job.getTasks().size() - 1);
-            for (Machine k : lastTask.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTardyTimes(lastTask, k)) {
-                    double tardinessPenalty = getTardinessPenalty(lastTask, k, t);
+            for (Task lastTask : job.getTasks()) {
+                if (lastTask.getSucceedingTask() != null) continue;
+                for (Machine k : lastTask.getMachinesCanUndertake()) {
+                    for (int t : parameters.getSetOfTardyTimes(lastTask, k)) {
+                        double tardinessPenalty = getTardinessPenalty(lastTask, k, t);
 
-                    GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
-                    obj.addTerm(tardinessPenalty * lastTask.getPriority() * parameters.getAlphaTardiness(), var);
+                        GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
+                        obj.addTerm(tardinessPenalty * lastTask.getPriority() * parameters.getAlphaTardiness(), var);
+                    }
                 }
             }
         }
 
         for (Task i : parameters.getSetOfTasks()) {
             for (Machine k : i.getMachinesCanUndertake()) {
-                for (int t = 0; t <= parameters.getFinalTimePoint(); t++) {
+                for (int t : parameters.getSetOfTimePoints()) {
                     double robustnessPenalty = getRobustnessPenalty(i, t);
 
                     GRBVar var = variables.getZ().get(i).get(k).get(t);
