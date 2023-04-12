@@ -9,10 +9,10 @@ import java.util.List;
 
 public class main_mip_run {
     public static void main(String[] args) throws Exception {
-        Integer[] n_jobs = {25, 30};
+        Integer[] n_jobs = {25};
         Integer[] machineCounts = {1};
-        Integer[] instances = {0, 1, 2};
-        Integer[] increments = {1, 2, 5, 10};
+        Integer[] instances = {0};
+        Integer[] increments = {2};
 
         String summaryPath = String.format("Java/output/mip_summary_%d.csv", System.currentTimeMillis());
         PrintWriter out = new PrintWriter(summaryPath);
@@ -23,7 +23,7 @@ public class main_mip_run {
                 for (int increment : increments) {
                     for (int machineCount : machineCounts) {
                         String inputPath = String.format("Java/input/scenario_%d_%d_%d.json", seed, n_job, machineCount);
-                        String outputDirectory = String.format("Java/output/scenario_seed_%d_nJob_%d_machineCount_%d/mip_increment_%d", seed, n_job, machineCount, increment);
+                        String outputDirectory = String.format("Java/output_asd/scenario_seed_%d_nJob_%d_machineCount_%d/mip_increment_%d", seed, n_job, machineCount, increment);
 
                         File directoryFile = new File(outputDirectory);
                         if (!directoryFile.exists()) {

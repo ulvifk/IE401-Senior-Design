@@ -23,7 +23,7 @@ public class Constraints {
         for(Task i : parameters.getSetOfTasks()){
             GRBLinExpr lhs = new GRBLinExpr();
             for (Machine machine : i.getMachinesCanUndertake()) {
-                for(int t : parameters.getSetOfTimePoints()){
+                for(int t : parameters.getSetOfTimePoints(i)){
                     GRBVar z = variables.getZ().get(i).get(machine).get(t);
                     lhs.addTerm(1, z);
                 }
@@ -35,7 +35,7 @@ public class Constraints {
 
     private static void setCapacityConstraint(GRBModel model, Variables variables, Parameters parameters) throws GRBException {
         for(Machine k : parameters.getSetOfMachines()){
-            for(int t : parameters.getSetOfTimePoints()){
+            for(int t : parameters.getAllTimePoints()){
                 GRBLinExpr lhs = new GRBLinExpr();
                 for(Task i : k.getSetOfAssignedTasks()){
                     ArrayList<Integer> setOfTBar = getSetOfTBar(i, k, t, parameters);
@@ -57,7 +57,7 @@ public class Constraints {
 
             GRBLinExpr lhs = new GRBLinExpr();
             for (Machine k : i.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTimePoints()) {
+                for (int t : parameters.getSetOfTimePoints(i)) {
                     GRBVar var = variables.getZ().get(i).get(k).get(t);
                     lhs.addTerm(t + i.getDiscretizedProcessingTime(k), var);
                 }
@@ -65,7 +65,7 @@ public class Constraints {
 
             GRBLinExpr rhs = new GRBLinExpr();
             for (Machine k : l.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTimePoints()) {
+                for (int t : parameters.getSetOfTimePoints(l)) {
                     GRBVar var = variables.getZ().get(l).get(k).get(t);
                     rhs.addTerm(t, var);
                 }
@@ -80,7 +80,7 @@ public class Constraints {
         int lowerBound = (t - i.getDiscretizedProcessingTime(k)) >= 0 ? (t - i.getDiscretizedProcessingTime(k)) + 1 : 0;
         int upperBound = t;
 
-        for (int tBar : parameters.getSetOfTimePoints()){
+        for (int tBar : parameters.getSetOfTimePoints(i)){
             if (tBar >= lowerBound && tBar <= upperBound) setOfTBar.add(tBar);
         }
 

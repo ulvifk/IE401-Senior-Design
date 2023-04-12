@@ -1,5 +1,7 @@
 package data;
 
+import data.enums.Priority;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,9 +23,10 @@ public class Task {
     private final Machine oldScheduleMachine;
     private double averageProcessingTime;
     private double averageDiscreteProcessingTime;
+    private Priority priorityEnum;
 
     public Task(int id, double processingTime, int precedingTaskId,
-                int succeedingTaskId, Job jobWhichBelongs, double priority, int oldScheduleTime, Machine oldScheduledMachine) {
+                int succeedingTaskId, Job jobWhichBelongs, double priority, int oldScheduleTime, Machine oldScheduledMachine, Priority priorityEnum) {
         this.id = id;
         this.processingTime = processingTime;
         this.processingTimes = new HashMap<>();
@@ -35,6 +38,7 @@ public class Task {
         this.priority = priority;
         this.oldScheduleTime = oldScheduleTime;
         this.oldScheduleMachine = oldScheduledMachine;
+        this.priorityEnum = priorityEnum;
     }
 
     public double getProcessingTime(Machine k) {
@@ -127,5 +131,9 @@ public class Task {
 
     public Map<Machine, Integer> getDiscretizedProcessingTimes() {
         return discretizedProcessingTimes;
+    }
+
+    public Priority getPriorityEnum() {
+        return priorityEnum;
     }
 }

@@ -4,16 +4,21 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import data.enums.Priority;
+import heuristic.Pair;
 
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Parameters {
     private final ArrayList<Job> setOfJobs;
     private final ArrayList<Task> setOfTasks;
     private final ArrayList<Machine> setOfMachines;
-    private final List<Integer> setOfTimePoints;
+    private final Map<Task, List<Integer>> setOfTimePoints;
+    private final List<Integer> allTimePoints;
     public int finalTimePoint = 250;
     private final double alphaCompletionTime = 1;
     private final double alphaTardiness = 10;
@@ -25,7 +30,8 @@ public class Parameters {
         this.setOfJobs = new ArrayList<>();
         this.setOfTasks = new ArrayList<>();
         this.setOfMachines = new ArrayList<>();
-        this.setOfTimePoints = new ArrayList<>();
+        this.setOfTimePoints = new HashMap<>();
+        this.allTimePoints = new ArrayList<>();
         this.timeWindowLength = timeWindowLength;
         this.finalTimePoint = this.finalTimePoint;
     }
@@ -61,7 +67,14 @@ public class Parameters {
                 default -> throw new Exception("Invalid priority definition");
             };
 
-            Job job = new Job(id, deadline, priority);
+            Priority priorityEnum = switch (jobObject.get("priority").getAsString()) {
+                case "LOW" -> Priority.LOW;
+                case "MEDIUM" -> Priority.MEDIUM;
+                case "HIGH" -> Priority.HIGH;
+                default -> throw new Exception("Invalid priority definition");
+            };
+
+            Job job = new Job(id, deadline, priority, priorityEnum);
             ArrayList<Task> taskList = new ArrayList<>();
 
             JsonArray tasksArray = jobObject.getAsJsonArray("tasks");
@@ -85,7 +98,7 @@ public class Parameters {
                     throw new Exception("Invalid old scheduled machine id");
                 }
 
-                Task task = new Task(taskId, processingTime, predecessorId, successorId, job, priority, oldScheduledTime, oldScheduledMachine);
+                Task task = new Task(taskId, processingTime, predecessorId, successorId, job, priority, oldScheduledTime, oldScheduledMachine, priorityEnum);
 
                 List<Machine> machinesList = this.setOfMachines.stream().filter(m -> m.getType().equals(type)).toList();
                 if (machinesCanUndertake.size() == 0) {
@@ -122,11 +135,67 @@ public class Parameters {
         for (Task task : this.setOfTasks){
             totalProcessingTime += this.getRoundUpToClosestFactor(task.getAverageProcessingTime());
         }
-        this.finalTimePoint = (int) (totalProcessingTime / this.setOfMachines.size() * 2.2);
+        this.finalTimePoint = (int) (totalProcessingTime / this.setOfMachines.size() * 2);
 
-        for (int t = 0; t <= this.finalTimePoint; t+=this.timeWindowLength) {
-            this.setOfTimePoints.add(t);
+        for (Task task : this.setOfTasks){
+            List<Integer> timePoints = new ArrayList<>();
+
+            Pair<Integer, Integer> lowerAndUpperTimeLimits = getLowerAndUpperTimeLimits(task);
+            int startPoint = lowerAndUpperTimeLimits.first;
+            int endPoint = lowerAndUpperTimeLimits.second;
+            int increment = this.timeWindowLength;
+
+            if (task.getPriorityEnum() == Priority.MEDIUM){
+                increment *= 2;
+            }
+            else if (task.getPriorityEnum() == Priority.LOW){
+                increment *= 4;
+            }
+
+            for (int t = startPoint; t <= endPoint; t+=increment) {
+                timePoints.add(t);
+            }
+
+            this.setOfTimePoints.put(task, timePoints);
         }
+
+        for (int t = 0; t<= this.finalTimePoint; t+=this.timeWindowLength){
+            this.allTimePoints.add(t);
+        }
+    }
+
+    private int redZoneStartTime(Task task){
+        double requiredTime = task.getAverageProcessingTime();
+        Task currentTask = task;
+        while (currentTask.getSucceedingTask() != null){
+            currentTask = currentTask.getSucceedingTask();
+            requiredTime += currentTask.getAverageProcessingTime();
+        }
+
+        double safetyCoefficient = 3;
+        requiredTime *= safetyCoefficient;
+
+        return (int) (task.getJobWhichBelongs().getDeadline() - requiredTime);
+    }
+
+    private int earliestPossibleStartTime(Task task){
+        double earliestPossibleStartTime = 0;
+
+        Task currentTask = task;
+        if (currentTask.getPrecedingTask() != null){
+            currentTask = currentTask.getPrecedingTask();
+            earliestPossibleStartTime += currentTask.getAverageProcessingTime();
+        }
+        return (int) earliestPossibleStartTime;
+    }
+
+    private Pair<Integer, Integer> getLowerAndUpperTimeLimits(Task task){
+        int lowerTimeLimit = earliestPossibleStartTime(task);
+        lowerTimeLimit = Math.max(lowerTimeLimit, redZoneStartTime(task));
+
+        int upperTimeLimit = this.finalTimePoint;
+
+        return new Pair<>(lowerTimeLimit, upperTimeLimit);
     }
 
     private void findPrecedenceRelationTasks(){
@@ -141,7 +210,7 @@ public class Parameters {
 
         int lowerBound = (i.getJobWhichBelongs().getDeadline() - i.getProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
 
-        for (int t : this.setOfTimePoints){
+        for (int t : this.setOfTimePoints.get(i)){
             if (t >= lowerBound){
                 setOfTardyPoints.add(t);
             }
@@ -193,7 +262,11 @@ public class Parameters {
         return timeWindowLength;
     }
 
-    public List<Integer> getSetOfTimePoints() {
-        return setOfTimePoints;
+    public List<Integer> getSetOfTimePoints(Task task) {
+        return setOfTimePoints.get(task);
+    }
+
+    public List<Integer> getAllTimePoints() {
+        return allTimePoints;
     }
 }

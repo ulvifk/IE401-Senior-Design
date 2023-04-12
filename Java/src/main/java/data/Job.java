@@ -1,5 +1,7 @@
 package data;
 
+import data.enums.Priority;
+
 import java.util.ArrayList;
 
 public class Job {
@@ -7,12 +9,14 @@ public class Job {
     private final ArrayList<Task> tasks;
     private final int deadline;
     private final double priority;
+    private final Priority priorityEnum;
 
-    public Job(int id, int deadline, double priority) {
+    public Job(int id, int deadline, double priority, Priority priorityEnum) {
         this.id = id;
         this.tasks = new ArrayList<>();
         this.deadline = deadline;
         this.priority = priority;
+        this.priorityEnum = priorityEnum;
     }
 
     public ArrayList<Task> getTasks() {
@@ -33,5 +37,9 @@ public class Job {
 
     public int getId() {
         return id;
+    }
+
+    public Priority getPriorityEnum() {
+        return priorityEnum;
     }
 }
