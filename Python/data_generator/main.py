@@ -18,7 +18,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
     for task_type in TASK_TYPE:
         n_machine_for_task_type = machine_count
         machines[task_type] = [Machine(id=base_id + i, task_type_undertakes=task_type, machine_name="",
-                                       processing_time_constant=np.random.uniform(0.5, 1.5))
+                                       processing_time_constant=np.random.uniform(0.8, 1.2))
                                for i in range(n_machine_for_task_type)]
         base_id += len(machines[task_type])
 
@@ -27,8 +27,18 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
     random.seed(instance_seed)
     np.random.seed(instance_seed)
 
+    priority_list = []
+    for i in range(n_job // 3):
+        priority_list.append("HIGH")
+    for i in range(n_job // 3):
+        priority_list.append("MEDIUM")
+    for i in range(n_job // 3):
+        priority_list.append("LOW")
+    while len(priority_list) < n_job:
+        priority_list.append("LOW")
+
     list_of_jobs = [
-        Job(priority=np.random.choice(["LOW", "MEDIUM", "HIGH"], p=[low_p, medium_p, high_p]), deadline=0, tasks=[],
+        Job(priority=priority_list.pop(0), deadline=0, tasks=[],
             id=i) for i in range(1, n_job + 1)]
 
     unique_task_id = 1
@@ -83,23 +93,40 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
 
         job.deadline = 0
 
-    average_machine = np.mean([len(machines[task_type]) for task_type in TASK_TYPE])
-    n_task = sum([len(job.tasks) for job in list_of_jobs])
-    for job in list_of_jobs:
-        deadline_factor = pow(n_task, 1 / 3) / (average_machine + 1) * 1.4
-        deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
-        deadline_std = deadline_mean * deadline_std_factor
-        deadline = np.round(np.random.normal(deadline_mean, deadline_std))
-        job.deadline = deadline
+    #average_machine = np.mean([len(machines[task_type]) for task_type in TASK_TYPE])
+    #n_task = sum([len(job.tasks) for job in list_of_jobs])
+    #for job in list_of_jobs:
+    #    deadline_factor = pow(n_task, 1 / 3) / (average_machine + 1) * 1.4
+    #    deadline_mean = np.sum([task.processing_time for task in job.tasks]) * deadline_factor
+    #    deadline_std = deadline_mean * deadline_std_factor
+    #    deadline = np.round(np.random.normal(deadline_mean, deadline_std))
+    #    job.deadline = deadline
 
-    counts = [2, 4, 4]
-    for i in range(len(list_of_jobs)):
-        if i < 2:
-            list_of_jobs[i].priority = "HIGH"
-        elif i < 6:
-            list_of_jobs[i].priority = "MEDIUM"
-        elif i < 10:
-            list_of_jobs[i].priority = "LOW"
+    total_processing_time = 0
+    for job in list_of_jobs:
+        for task in job.tasks:
+            avg_processing_time = 0
+            for machine_id in task.machines_can_undertake:
+                machine = [machine for machine in machines[task.type] if machine.id == machine_id][0]
+                avg_processing_time += machine.processing_time_constant * task.processing_time
+            avg_processing_time /= len(task.machines_can_undertake)
+            total_processing_time += avg_processing_time
+
+    total_processing_time = total_processing_time / len(machines)
+
+    low_base_deadline = 1.3 * total_processing_time
+    medium_base_deadline = 0.9 * total_processing_time
+    high_base_deadline = 0.5 * total_processing_time
+    for job in list_of_jobs:
+        if job.priority == "LOW":
+            job_base_deadline = low_base_deadline
+        elif job.priority == "MEDIUM":
+            job_base_deadline = medium_base_deadline
+        else:
+            job_base_deadline = high_base_deadline
+
+        job_base_deadline += np.random.normal(0, job_base_deadline * 0.1)
+        job.deadline = job_base_deadline
 
     list_of_jobs = [job.json_encoded() for job in list_of_jobs]
     list_of_machines = []
@@ -115,12 +142,9 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
 
 
 if __name__ == "__main__":
-
-    n_machine = 5
-
-    for seed in [0, 1, 2]:
-        for n_job in [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]:
-            for machine_count in [1, 2]:
+    for seed in [0, 1, 2, 3, 4]:
+        for n_job in [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]:
+            for machine_count in [1]:
                 scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
                                                     processing_mean=10, processing_std=4,
                                                     deadline_factor=2.25, deadline_std_factor=0.1,
