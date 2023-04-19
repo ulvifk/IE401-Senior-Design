@@ -8,7 +8,7 @@ import java.util.List;
 
 public class main_solution_heuristic_feed{
     public static void main(String[] args) throws Exception {
-        Integer[] n_jobs = new Integer[]{30};
+        Integer[] n_jobs = new Integer[]{25, 30, 35, 40, 45};
         Integer[] instances = new Integer[]{0};
         Integer[] increments = {-1};
         Integer[] machineCounts = {1};
@@ -30,7 +30,7 @@ public class main_solution_heuristic_feed{
                             directoryFile.mkdirs();
                         }
 
-                        Parameters parameters = new Parameters(1);
+                        Parameters parameters = new Parameters(1, false);
                         parameters.readData(inputPath);
 
                         Model model = new Model(parameters);

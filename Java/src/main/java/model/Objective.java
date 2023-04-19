@@ -14,12 +14,13 @@ public class Objective {
 
     public static void setObjective(GRBModel model, Parameters parameters, Variables variables) throws GRBException {
         GRBLinExpr obj = new GRBLinExpr();
+
         for (Job job : parameters.getSetOfJobs()) {
             if (job.getTasks().size() == 0) continue;
             for (Task lastTask : job.getTasks()) {
                 if (lastTask.getSucceedingTask() != null) continue;
                 for (Machine k : lastTask.getMachinesCanUndertake()) {
-                    for (int t : parameters.getSetOfTimePoints(lastTask)) {
+                    for (int t : parameters.getSetOfTimePoints(lastTask, k)) {
                         double completionTime = t + lastTask.getProcessingTime(k);
                         double priority = lastTask.getPriority();
 
@@ -41,17 +42,6 @@ public class Objective {
                         GRBVar var = variables.getZ().get(lastTask).get(k).get(t);
                         obj.addTerm(tardinessPenalty * lastTask.getPriority() * parameters.getAlphaTardiness(), var);
                     }
-                }
-            }
-        }
-
-        for (Task i : parameters.getSetOfTasks()) {
-            for (Machine k : i.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTimePoints(i)) {
-                    double robustnessPenalty = getRobustnessPenalty(i, t);
-
-                    GRBVar var = variables.getZ().get(i).get(k).get(t);
-                    obj.addTerm(robustnessPenalty * parameters.getAlphaRobust(), var);
                 }
             }
         }

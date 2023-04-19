@@ -63,7 +63,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
         unique_task_id += 1
 
         for task_type in task_types[1:-1]:
-            processing_time = int(np.random.normal(processing_mean, processing_std))
+            processing_time = max(1, int(np.random.normal(processing_mean, processing_std)))
             list_of_tasks.append(Task(id=unique_task_id,
                                       type=task_type,
                                       processing_time=processing_time,
@@ -77,7 +77,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
             unique_task_id += 1
 
         # Last task
-        processing_time = int(np.random.normal(processing_mean, processing_std))
+        processing_time = max(1, int(np.random.normal(processing_mean, processing_std)))
         list_of_tasks.append(Task(id=unique_task_id,
                                   type=task_types[-1],
                                   processing_time=processing_time,

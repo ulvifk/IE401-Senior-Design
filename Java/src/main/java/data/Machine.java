@@ -37,4 +37,23 @@ public class Machine {
     public void addTask(Task task){
         this.setOfAssignedTasks.add(task);
     }
+
+    // Hash by id
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
+    // Compare by id
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final Machine other = (Machine) obj;
+        return this.id == other.id;
+    }
 }

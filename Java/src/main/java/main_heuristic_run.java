@@ -8,11 +8,19 @@ import java.io.PrintWriter;
 public class main_heuristic_run {
     public static void main(String[] args) throws Exception {
 
-        Integer[] n_jobs = new Integer[]{20};
-        Integer[] instances = new Integer[]{0};
+        Integer[] n_jobs = new Integer[]{20, 25, 30, 35, 40, 45};
+        Integer[] instances = new Integer[]{0, 1, 2};
         int[] machineCounts = {1};
 
-        String summaryPath = "Java/output/heuristic_summary.csv";
+        String keyWord = "heuristic";
+
+        String summaryDirectory = String.format("Java/output/%s", keyWord);
+        File directoryFile = new File(summaryDirectory);
+        if (!directoryFile.exists()) {
+            directoryFile.mkdirs();
+        }
+
+        String summaryPath = String.format(summaryDirectory + "/mip_summary_%d.csv", System.currentTimeMillis());
         PrintWriter out = new PrintWriter(summaryPath);
         out.println("instance,#jobs,#machines,increment,Weighted Completion Time,Total Deviation," +
                 "Weighted Total Tardiness,Objective Value");
@@ -21,13 +29,13 @@ public class main_heuristic_run {
             for (int seed : instances) {
                 for (int machineCount : machineCounts) {
                     String inputPath = String.format("Java/input/scenario_%d_%d_%d.json", seed, n_job, machineCount);
-                    String outputDirectory = String.format("Java/output/scenario_seed_%d_nJob_%d_machineCount_%d/heuristic", seed, n_job, machineCount);
-                    File directoryFile = new File(outputDirectory);
+                    String outputDirectory = String.format("Java/output/%s/scenario_seed_%d_nJob_%d_machineCount_%d/heuristic", keyWord, seed, n_job, machineCount);
+                    directoryFile = new File(outputDirectory);
                     if (!directoryFile.exists()) {
                         directoryFile.mkdirs();
                     }
 
-                    Parameters parameters = new Parameters(1);
+                    Parameters parameters = new Parameters(1, false);
                     parameters.readData(inputPath);
 
                     Heuristic heuristic = new Heuristic(parameters);

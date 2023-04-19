@@ -32,7 +32,7 @@ public class Model {
     private final GRBModel model;
 
     private final Parameters parameters;
-    private Variables variables;
+    public Variables variables;
     public double totalWeightedCompletionTime;
     public double totalDeviation;
     public double totalWeightedTardiness;
@@ -134,106 +134,13 @@ public class Model {
     public boolean isSolutionFound() throws GRBException {
         return this.model.get(GRB.IntAttr.SolCount) > 0;
     }
-
     public void feedSolution(String solutionPath) throws FileNotFoundException, GRBException {
-
-
         FileReader reader = new FileReader(solutionPath);
 
         JsonElement solutionElement = JsonParser.parseReader(reader);
         JsonObject solutionObject = solutionElement.getAsJsonObject();
 
-        Map<Task, Pair<Machine, Double>> taskMapping = new HashMap<>();
-
-        JsonArray jobsArray = solutionObject.get("jobs").getAsJsonArray();
-        for (JsonElement jobElement : jobsArray){
-            JsonObject jobObject = jobElement.getAsJsonObject();
-            int jobId = jobObject.get("id").getAsInt();
-            JsonArray tasksArray = jobObject.get("tasks").getAsJsonArray();
-            for (JsonElement taskElement : tasksArray){
-                JsonObject taskObject = taskElement.getAsJsonObject();
-                int taskId = taskObject.get("id").getAsInt();
-                int machineId = taskObject.get("scheduled_machine").getAsInt();
-                double startTime = taskObject.get("scheduled_start_time").getAsDouble();
-                double endTime = taskObject.get("scheduled_end_time").getAsDouble();
-
-                Task task = parameters.getSetOfTasks().stream().filter(t -> t.getId() == taskId).findFirst().orElseThrow();
-                Machine machine = parameters.getSetOfMachines().stream().filter(m -> m.getId() == machineId).findFirst().orElseThrow();
-
-                taskMapping.put(task, new Pair<>(machine, startTime));
-            }
-        }
-
-        Map<Machine, List<Task>> machineOrders = new HashMap<>();
-        for (Task task : taskMapping.keySet()){
-            Pair<Machine, Double> pair = taskMapping.get(task);
-            Machine machine = pair.first;
-            double startTime = pair.second;
-            if (!machineOrders.containsKey(machine)){
-                machineOrders.put(machine, new LinkedList<>());
-            }
-
-            machineOrders.get(machine).add(task);
-        }
-
-        for (List<Task> tasks : machineOrders.values()){
-            tasks.sort(Comparator.comparing(task -> taskMapping.get(task).second));
-        }
-
-        Map<Task, Task> machinePredecessors = new HashMap<>();
-        for (Machine machine : machineOrders.keySet()){
-            List<Task> tasks = machineOrders.get(machine);
-            machinePredecessors.put(tasks.get(0), null);
-            for (int i = 0; i < tasks.size() - 1; i++){
-                Task task = tasks.get(i);
-                Task nextTask = tasks.get(i + 1);
-                machinePredecessors.put(nextTask, task);
-            }
-        }
-
-        List<Task> unassignedTasks = new LinkedList<>(parameters.getSetOfTasks());
-        Map<Task, Integer> discreteStartTimes = new HashMap<>();
-        Map<Task, Integer> discreteEndTimes = new HashMap<>();
-
-        while (unassignedTasks.size() > 0){
-            ListIterator<Task> iterator = unassignedTasks.listIterator();
-            while (iterator.hasNext()){
-                Task task = iterator.next();
-                Task jobPredecessor = task.getPrecedingTask();
-                Task machinePredecessor = machinePredecessors.get(task);
-                Machine machine = taskMapping.get(task).first;
-
-                if (jobPredecessor != null && !discreteEndTimes.containsKey(jobPredecessor)) continue;
-                if (machinePredecessor != null && !discreteEndTimes.containsKey(machinePredecessor)) continue;
-
-                int jobPredecessorTime = jobPredecessor != null ? discreteEndTimes.get(jobPredecessor) : 0;
-                int machinePredecessorTime = machinePredecessor != null ? discreteEndTimes.get(machinePredecessor) : 0;
-
-                int startTime = Math.max(jobPredecessorTime, machinePredecessorTime);
-                int endTime = startTime + task.getDiscretizedProcessingTime(machine);
-
-                discreteStartTimes.put(task, startTime);
-                discreteEndTimes.put(task, endTime);
-
-                iterator.remove();
-            }
-        }
-
-        for (Task task : discreteStartTimes.keySet()){
-            int startTime = discreteStartTimes.get(task);
-            int endTime = discreteEndTimes.get(task);
-            Machine machine = taskMapping.get(task).first;
-
-            variables.getZ().get(task).get(machine).get(startTime).set(GRB.DoubleAttr.Start, 1.0);
-        }
-    }
-
-    public void feedSolution2(String solutionPath) throws FileNotFoundException, GRBException {
-        FileReader reader = new FileReader(solutionPath);
-
-        JsonElement solutionElement = JsonParser.parseReader(reader);
-        JsonObject solutionObject = solutionElement.getAsJsonObject();
-
+        Map<Machine, List<Pair<Task, Integer>>> machinePairMap = new HashMap<>();
         Map<Task, Pair<Machine, Integer>> taskMapping = new HashMap<>();
 
         JsonArray jobsArray = solutionObject.get("jobs").getAsJsonArray();
@@ -251,14 +158,73 @@ public class Model {
                 Task task = parameters.getSetOfTasks().stream().filter(t -> t.getId() == taskId).findFirst().orElseThrow();
                 Machine machine = parameters.getSetOfMachines().stream().filter(m -> m.getId() == machineId).findFirst().orElseThrow();
 
+                if (!machinePairMap.containsKey(machine)){
+                    machinePairMap.put(machine, new LinkedList<>());
+                }
+
+                machinePairMap.get(machine).add(new Pair<>(task, startTime));
                 taskMapping.put(task, new Pair<>(machine, startTime));
             }
         }
 
-        for (Task task : taskMapping.keySet()){
-            Pair<Machine, Integer> pair = taskMapping.get(task);
-            Machine machine = pair.first;
-            int startTime = pair.second;
+        for (Machine machine : machinePairMap.keySet()){
+            List<Pair<Task, Integer>> tasks = machinePairMap.get(machine);
+            tasks.sort(Comparator.comparing(p -> p.second));
+        }
+
+        Map<Task, Task> machinePredecessors = new HashMap<>();
+        for (Machine machine : machinePairMap.keySet()){
+            List<Pair<Task, Integer>> tasks = machinePairMap.get(machine);
+            for (int i = 1; i<tasks.size(); i++){
+                machinePredecessors.put(tasks.get(i).first, tasks.get(i-1).first);
+            }
+        }
+
+        List<Task> unassignedTasks = new LinkedList<>(parameters.getSetOfTasks());
+        Map<Task, Integer> startTimes = new HashMap<>();
+        Map<Task, Integer> endTimes = new HashMap<>();
+
+        while (unassignedTasks.size() > 0){
+            ListIterator<Task> iterator = unassignedTasks.listIterator();
+            while (iterator.hasNext()){
+                Task task = iterator.next();
+                Task jobPredecessor = task.getPrecedingTask();
+                Task machinePredecessor = machinePredecessors.get(task);
+                Machine machine = taskMapping.get(task).first;
+
+                if (jobPredecessor != null && !endTimes.containsKey(jobPredecessor)) continue;
+                if (machinePredecessor != null && !endTimes.containsKey(machinePredecessor)) continue;
+
+                double jobPredecessorTime = jobPredecessor != null ? endTimes.get(jobPredecessor) : 0;
+                double machinePredecessorTime = machinePredecessor != null ? endTimes.get(machinePredecessor) : 0;
+
+                int startTime = (int) Math.max(jobPredecessorTime, machinePredecessorTime);
+
+                for (int t : this.parameters.getSetOfTimePoints(task, machine)){
+                    if (t > startTime){
+                        startTime = t;
+                        break;
+                    }
+
+                    if (t == this.parameters.getSetOfTimePoints(task, machine).get(this.parameters.getSetOfTimePoints(task, machine).size() - 1)){
+                        throw new RuntimeException(String.format("Failed to find a time point for task %d", task.getId()));
+                    }
+                }
+
+                int endTime = startTime + task.getDiscretizedProcessingTime(machine);
+
+                startTimes.put(task, startTime);
+                endTimes.put(task, endTime);
+
+                iterator.remove();
+            }
+        }
+
+        for (Task task : startTimes.keySet()){
+            int startTime = startTimes.get(task);
+            int endTime = endTimes.get(task);
+            Machine machine = taskMapping.get(task).first;
+
             variables.getZ().get(task).get(machine).get(startTime).set(GRB.DoubleAttr.Start, 1.0);
         }
     }

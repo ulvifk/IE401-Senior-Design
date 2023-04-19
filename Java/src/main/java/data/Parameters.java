@@ -17,16 +17,19 @@ public class Parameters {
     private final ArrayList<Job> setOfJobs;
     private final ArrayList<Task> setOfTasks;
     private final ArrayList<Machine> setOfMachines;
-    private final Map<Task, List<Integer>> setOfTimePoints;
+    public final Map<Task, Map<Machine, List<Integer>>> setOfTimePoints;
     private final List<Integer> allTimePoints;
     public int finalTimePoint = 250;
     private final double alphaCompletionTime = 1;
     private final double alphaTardiness = 10;
     private final double alphaRobust = 0.1;
-
     private final int timeWindowLength;
+    public final boolean doSizeReduction;
+    public int highWeight = 1;
+    public int mediumWeight = 1;
+    public int lowWeight = 1;
 
-    public Parameters(int timeWindowLength) {
+    public Parameters(int timeWindowLength, boolean doSizeReduction) {
         this.setOfJobs = new ArrayList<>();
         this.setOfTasks = new ArrayList<>();
         this.setOfMachines = new ArrayList<>();
@@ -34,7 +37,9 @@ public class Parameters {
         this.allTimePoints = new ArrayList<>();
         this.timeWindowLength = timeWindowLength;
         this.finalTimePoint = this.finalTimePoint;
+        this.doSizeReduction = doSizeReduction;
     }
+
     public void readData(String jsonPath) throws Exception {
         FileReader reader = new FileReader(jsonPath);
         JsonElement jsonElement = JsonParser.parseReader(reader);
@@ -131,49 +136,65 @@ public class Parameters {
             task.setAverageDiscreteProcessingTime(avgDiscretizedProcessingTime);
         }
 
-        double totalProcessingTime = 0;
-        for (Task task : this.setOfTasks){
-            totalProcessingTime += this.getRoundUpToClosestFactor(task.getAverageProcessingTime());
-        }
-        this.finalTimePoint = (int) (totalProcessingTime / this.setOfMachines.size() * 2);
+        this.finalTimePoint = (int) (this.getSetOfJobs().stream().mapToDouble(Job::getDeadline).max().orElse(0) * 1.2);
 
-        for (Task task : this.setOfTasks){
-            List<Integer> timePoints = new ArrayList<>();
-
-            Pair<Integer, Integer> lowerAndUpperTimeLimits = getLowerAndUpperTimeLimits(task);
-            int startPoint = lowerAndUpperTimeLimits.first;
-            int endPoint = lowerAndUpperTimeLimits.second;
-            int increment = this.timeWindowLength;
-
-            if (task.getPriorityEnum() == Priority.MEDIUM){
-                increment *= 2;
-            }
-            else if (task.getPriorityEnum() == Priority.LOW){
-                increment *= 4;
-            }
-
-            for (int t = startPoint; t <= endPoint; t+=increment) {
-                timePoints.add(t);
-            }
-
-            this.setOfTimePoints.put(task, timePoints);
-        }
+        generateTimePoints();
 
         for (int t = 0; t<= this.finalTimePoint; t+=this.timeWindowLength){
             this.allTimePoints.add(t);
         }
     }
 
-    private int redZoneStartTime(Task task){
-        double requiredTime = task.getAverageProcessingTime();
-        Task currentTask = task;
-        while (currentTask.getSucceedingTask() != null){
-            currentTask = currentTask.getSucceedingTask();
-            requiredTime += currentTask.getAverageProcessingTime();
-        }
+    private void generateTimePoints(){
+        if (this.doSizeReduction) {
+            for (Task task : this.setOfTasks) {
+                List<Integer> timePoints = new ArrayList<>();
 
-        double safetyCoefficient = 3;
-        requiredTime *= safetyCoefficient;
+                Pair<Integer, Integer> lowerAndUpperTimeLimits = getLowerAndUpperTimeLimits(task);
+                int startPoint = lowerAndUpperTimeLimits.first;
+                int endPoint = lowerAndUpperTimeLimits.second;
+                int increment = this.timeWindowLength;
+
+                if (task.getPriorityEnum() == Priority.MEDIUM) {
+                    increment *= this.mediumWeight;
+                } else if (task.getPriorityEnum() == Priority.LOW) {
+                    increment *= this.lowWeight;
+                }
+
+                int t = startPoint;
+                while (t < endPoint){
+                    timePoints.add(t);
+                    if (t > startPoint){
+                        t += increment;
+                    }
+                    else {
+                        t += increment * 2;
+                    }
+                }
+
+                this.setOfTimePoints.put(task, new HashMap<>());
+                for (Machine machine : task.getMachinesCanUndertake()){
+                    this.setOfTimePoints.get(task).put(machine, timePoints);
+                }
+            }
+        }
+        else {
+            for (Task task : this.setOfTasks){
+                List<Integer> timePoints = new ArrayList<>();
+                for (int t = 0; t<= this.finalTimePoint; t+=this.timeWindowLength){
+                    timePoints.add(t);
+                }
+                this.setOfTimePoints.put(task, new HashMap<>());
+                for (Machine machine : task.getMachinesCanUndertake()){
+                    this.setOfTimePoints.get(task).put(machine, timePoints);
+                }
+            }
+        }
+    }
+
+    private int redZoneStartTime(Task task, double coeff){
+        double requiredTime = getRequiredTime(task);
+        requiredTime *= coeff;
 
         return (int) (task.getJobWhichBelongs().getDeadline() - requiredTime);
     }
@@ -191,11 +212,24 @@ public class Parameters {
 
     private Pair<Integer, Integer> getLowerAndUpperTimeLimits(Task task){
         int lowerTimeLimit = earliestPossibleStartTime(task);
-        lowerTimeLimit = Math.max(lowerTimeLimit, redZoneStartTime(task));
+        //lowerTimeLimit = Math.max(lowerTimeLimit, redZoneStartTime(task, 2));
 
         int upperTimeLimit = this.finalTimePoint;
+        //upperTimeLimit = (int) Math.min(upperTimeLimit, task.getJobWhichBelongs().getDeadline() * 1.5);
 
         return new Pair<>(lowerTimeLimit, upperTimeLimit);
+    }
+
+    public double getRequiredTime(Task task){
+        double requiredTime = task.getAverageProcessingTime();
+
+        Task currentTask = task;
+        while (currentTask.getSucceedingTask() != null){
+            currentTask = currentTask.getSucceedingTask();
+            requiredTime += currentTask.getAverageProcessingTime();
+        }
+
+        return requiredTime;
     }
 
     private void findPrecedenceRelationTasks(){
@@ -210,7 +244,7 @@ public class Parameters {
 
         int lowerBound = (i.getJobWhichBelongs().getDeadline() - i.getProcessingTime(k)) > 0 ? (i.getJobWhichBelongs().getDeadline() - i.getDiscretizedProcessingTime(k) + 1) : 0;
 
-        for (int t : this.setOfTimePoints.get(i)){
+        for (int t : this.setOfTimePoints.get(i).get(k)){
             if (t >= lowerBound){
                 setOfTardyPoints.add(t);
             }
@@ -262,8 +296,8 @@ public class Parameters {
         return timeWindowLength;
     }
 
-    public List<Integer> getSetOfTimePoints(Task task) {
-        return setOfTimePoints.get(task);
+    public List<Integer> getSetOfTimePoints(Task task, Machine machine) {
+        return setOfTimePoints.get(task).get(machine);
     }
 
     public List<Integer> getAllTimePoints() {

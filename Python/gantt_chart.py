@@ -33,6 +33,9 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
     df["scheduled_machine"] = df["scheduled_machine"].map(lambda x: "Machine " + str(x))
     df.sort_values(by=["job"], inplace=True)
 
+    priori = ["HIGH", "MEDIUM", "LOW"]
+    df.sort_values(by=["priority"], key=lambda x: x.map(priori.index), inplace=True)
+
     for index, row in df.iterrows():
         string_name = f"Job {row['job']} | {row['priority']}"
         df.at[index, "job"] = string_name
@@ -100,14 +103,10 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
 if __name__ == "__main__":
     for seed in [0]:
         for n in [20]:
-            for inc in [1, 2, 5, 10]:
+            for inc in [5]:
                 for machine_count in [1]:
-                    #normal = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/heuristic/heuristic_solution.json"
-                    #stats = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/heuristic/heuristic_stats.json"
-                    #create_gantt_chart("Normal", normal, stats)
-
-                    normal = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_solution.json"
-                    stats = f"../Java/output/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_stats.json"
+                    normal = f"../Java/output/pure_mip/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_solution.json"
+                    stats = f"../Java/output/pure_mip/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_stats.json"
                     create_gantt_chart("Normal", normal, stats)
 
 

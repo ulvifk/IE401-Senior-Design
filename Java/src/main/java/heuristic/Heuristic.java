@@ -92,30 +92,18 @@ public class Heuristic {
     }
 
     private double tardinessScore(Task task, Machine machine, double time) {
-        double slack = task.getJobWhichBelongs().getDeadline() - (time + task.getProcessingTime(machine));
+        double slack = task.getJobWhichBelongs().getDeadline() - time;
 
-        double requiredTime = 0;
-        Task currentTask = task;
-        while (currentTask.getSucceedingTask() != null) {
-            currentTask = currentTask.getSucceedingTask();
-
-            List<Double> processingTimes = new LinkedList<>();
-            for (Machine k : currentTask.getMachinesCanUndertake()) {
-                processingTimes.add(currentTask.getProcessingTime(k));
-            }
-
-            double averageProcessingTime = processingTimes.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
-            requiredTime += averageProcessingTime;
-        }
+        double requiredTime = parameters.getRequiredTime(task);
 
         slack = slack - requiredTime;
-        double penalty = Math.max(0, 30 - slack);
+        double penalty = this.parameters.finalTimePoint - slack;
 
-        return Math.pow(penalty, 2);
+        return Math.pow(penalty, 1);
     }
 
     private double timeScore(Task task, double time) {
-        return -time;
+        return -(time + task.getAverageProcessingTime());
     }
 
     private double deviationScore(Task task, double time) {

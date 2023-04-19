@@ -23,13 +23,13 @@ public class Constraints {
         for(Task i : parameters.getSetOfTasks()){
             GRBLinExpr lhs = new GRBLinExpr();
             for (Machine machine : i.getMachinesCanUndertake()) {
-                for(int t : parameters.getSetOfTimePoints(i)){
+                for(int t : parameters.getSetOfTimePoints(i, machine)){
                     GRBVar z = variables.getZ().get(i).get(machine).get(t);
                     lhs.addTerm(1, z);
                 }
             }
 
-            model.addConstr(lhs, GRB.EQUAL, 1, "Task_%d_only_once_assignment_cons");
+            model.addConstr(lhs, GRB.EQUAL, 1, String.format("Task_%d_only_once_assignment_cons", i.getId()));
         }
     }
 
@@ -45,7 +45,7 @@ public class Constraints {
                     }
                 }
 
-                model.addConstr(lhs, GRB.LESS_EQUAL, 1, String.format("Capacity_constraint_machine_%d", k.getId()));
+                model.addConstr(lhs, GRB.LESS_EQUAL, 1, String.format("Capacity_constraint_machine_%d_%d", k.getId(), t));
             }
         }
     }
@@ -57,7 +57,7 @@ public class Constraints {
 
             GRBLinExpr lhs = new GRBLinExpr();
             for (Machine k : i.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTimePoints(i)) {
+                for (int t : parameters.getSetOfTimePoints(i, k)) {
                     GRBVar var = variables.getZ().get(i).get(k).get(t);
                     lhs.addTerm(t + i.getDiscretizedProcessingTime(k), var);
                 }
@@ -65,7 +65,7 @@ public class Constraints {
 
             GRBLinExpr rhs = new GRBLinExpr();
             for (Machine k : l.getMachinesCanUndertake()) {
-                for (int t : parameters.getSetOfTimePoints(l)) {
+                for (int t : parameters.getSetOfTimePoints(l, k)) {
                     GRBVar var = variables.getZ().get(l).get(k).get(t);
                     rhs.addTerm(t, var);
                 }
@@ -80,7 +80,7 @@ public class Constraints {
         int lowerBound = (t - i.getDiscretizedProcessingTime(k)) >= 0 ? (t - i.getDiscretizedProcessingTime(k)) + 1 : 0;
         int upperBound = t;
 
-        for (int tBar : parameters.getSetOfTimePoints(i)){
+        for (int tBar : parameters.getSetOfTimePoints(i, k)){
             if (tBar >= lowerBound && tBar <= upperBound) setOfTBar.add(tBar);
         }
 
