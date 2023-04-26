@@ -12,7 +12,7 @@ public class iterative_model {
     public static void main(String[] args) throws Exception {
         Integer[] n_jobs = {20, 30, 40, 50};
         Integer[] machineCounts = {1};
-        Integer[] instances = {0, 1, 2};
+        Integer[] instances = {3, 4};
         Integer[] increments = {1, 2};
 
         int highWeight = 1;
@@ -28,7 +28,7 @@ public class iterative_model {
             directoryFile.mkdirs();
         }
 
-        String summaryPath = String.format(summaryDirectory + "/summary_0_1_2.csv");
+        String summaryPath = String.format(summaryDirectory + "/summary_3_4.csv");
 
         PrintWriter out = new PrintWriter(summaryPath);
         out.println("instance,#jobs,#machines,increment,#Varibles,final time point," +

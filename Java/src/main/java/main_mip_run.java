@@ -11,7 +11,7 @@ public class main_mip_run {
     public static void main(String[] args) throws Exception {
         Integer[] n_jobs = {20, 30, 40, 50};
         Integer[] machineCounts = {1};
-        Integer[] instances = {0, 1, 2};
+        Integer[] instances = {3, 4};
         Integer[] increments = {1, 2, 5};
 
         int highWeight = 1;
@@ -27,7 +27,7 @@ public class main_mip_run {
             directoryFile.mkdirs();
         }
 
-        String summaryPath = String.format(summaryDirectory + "/mip_summary_0_1.csv");
+        String summaryPath = String.format(summaryDirectory + "/mip_summary_3_4.csv");
 
         PrintWriter out = new PrintWriter(summaryPath);
         out.println("instance,#jobs,#machines,increment,#Varibles,final time point,Weighted Completion Time,Total Deviation,Weighted Total Tardiness,Objective Value,Gap,Cpu Time");

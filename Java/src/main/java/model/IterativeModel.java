@@ -101,7 +101,6 @@ public class IterativeModel {
                 this.parameters.getAlphaTardiness() * this.beforeTuneTotalWeightedTardiness +
                 this.parameters.getAlphaCompletionTime() * this.beforeTuneTotalWeightedCompletionTime;
 
-
         if (additionalTimeFromPrevious > 5){
             System.out.println("Further optimizing...");
 
