@@ -112,7 +112,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
             avg_processing_time /= len(task.machines_can_undertake)
             total_processing_time += avg_processing_time
 
-    total_processing_time = total_processing_time / len(machines)
+    total_processing_time = total_processing_time / len(machines) / machine_count
 
     low_base_deadline = 1.3 * total_processing_time
     medium_base_deadline = 0.9 * total_processing_time
@@ -144,7 +144,7 @@ def generate_random_scenario(n_job, possible_task_numbers: list, processing_mean
 if __name__ == "__main__":
     for seed in [0, 1, 2, 3, 4]:
         for n_job in [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60]:
-            for machine_count in [1]:
+            for machine_count in [2]:
                 scenario = generate_random_scenario(n_job=n_job, possible_task_numbers=[2, 3, 4],
                                                     processing_mean=10, processing_std=4,
                                                     deadline_factor=2.25, deadline_std_factor=0.1,

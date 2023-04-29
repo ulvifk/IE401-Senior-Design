@@ -28,6 +28,7 @@ public class Parameters {
     public int highWeight = 1;
     public int mediumWeight = 1;
     public int lowWeight = 1;
+    public double finalTimePointCoeff;
 
     public Parameters(int timeWindowLength, boolean doSizeReduction) {
         this.setOfJobs = new ArrayList<>();
@@ -38,6 +39,19 @@ public class Parameters {
         this.timeWindowLength = timeWindowLength;
         this.finalTimePoint = this.finalTimePoint;
         this.doSizeReduction = doSizeReduction;
+        this.finalTimePointCoeff = 1.2;
+    }
+
+    public Parameters(int timeWindowLength, boolean doSizeReduction, double finalTimePointCoeff) {
+        this.setOfJobs = new ArrayList<>();
+        this.setOfTasks = new ArrayList<>();
+        this.setOfMachines = new ArrayList<>();
+        this.setOfTimePoints = new HashMap<>();
+        this.allTimePoints = new ArrayList<>();
+        this.timeWindowLength = timeWindowLength;
+        this.finalTimePoint = this.finalTimePoint;
+        this.doSizeReduction = doSizeReduction;
+        this.finalTimePointCoeff = finalTimePointCoeff;
     }
 
     public void readData(String jsonPath) throws Exception {
@@ -136,7 +150,7 @@ public class Parameters {
             task.setAverageDiscreteProcessingTime(avgDiscretizedProcessingTime);
         }
 
-        this.finalTimePoint = (int) (this.getSetOfJobs().stream().mapToDouble(Job::getDeadline).max().orElse(0) * 1.2);
+        this.finalTimePoint = (int) (this.getSetOfJobs().stream().mapToDouble(Job::getDeadline).max().orElse(0) * this.finalTimePointCoeff);
 
         generateTimePoints();
 

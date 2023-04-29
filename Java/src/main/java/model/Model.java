@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import data.Job;
 import data.Machine;
 import data.Parameters;
 import data.Task;
@@ -92,6 +93,22 @@ public class Model {
             this.gap = 0;
             this.cpuTime = 0;
         }
+    }
+
+    public void calculateKips(List<Solution> solutionsList) throws GRBException {
+        Map<Task, Solution> solutions = new HashMap<>();
+        for (Solution solution : solutionsList) {
+            solutions.put(solution.getTask(), solution);
+        }
+
+        this.totalWeightedCompletionTime = ScenarioUpdater.calculateTotalWeightedCompletionTime(solutions);
+        this.totalDeviation = ScenarioUpdater.calculateDeviationFromEarlierPlan(solutions);
+        this.totalWeightedTardiness = ScenarioUpdater.calculateTotalWeightedTardiness(solutions);
+        this.objective = this.parameters.getAlphaRobust() * this.totalDeviation +
+                this.parameters.getAlphaTardiness() * this.totalWeightedTardiness +
+                this.parameters.getAlphaCompletionTime() * this.totalWeightedCompletionTime;
+        this.gap = model.get(GRB.DoubleAttr.MIPGap);
+        this.cpuTime = model.get(GRB.DoubleAttr.Runtime);
     }
 
     public void writeSolution(String inputPath, String outputPath) throws FileNotFoundException, GRBException {
@@ -227,5 +244,44 @@ public class Model {
 
             variables.getZ().get(task).get(machine).get(startTime).set(GRB.DoubleAttr.Start, 1.0);
         }
+    }
+
+    public void writeSolutionsWithSolutions(List<Solution> solutions, String inputPath, String outputPath) throws FileNotFoundException {
+        FileReader reader = new FileReader(inputPath);
+        JsonElement jsonElement = JsonParser.parseReader(reader);
+        JsonObject jsonObject = jsonElement.getAsJsonObject();
+
+        JsonArray jobsArray = jsonObject.getAsJsonArray("jobs");
+
+        for(JsonElement jobElement : jobsArray){
+            JsonObject jobObject = jobElement.getAsJsonObject();
+            int jobId = jobObject.get("id").getAsInt();
+            Job job = parameters.getSetOfJobs().stream().filter(job1 -> job1.getId() == jobId).findAny().orElse(null);
+            if (job == null) continue;
+
+            JsonArray taskArray = jobObject.getAsJsonArray("tasks");
+            for(JsonElement taskElement : taskArray){
+                JsonObject taskObject = taskElement.getAsJsonObject();
+                int taskId = taskObject.get("id").getAsInt();
+
+                Solution solution = solutions.stream().filter(solution1 -> solution1.getTask().getId() == taskId).findAny().orElse(null);
+
+                taskObject.remove("scheduled_start_time");
+                taskObject.addProperty("scheduled_start_time", solution.getStartTime());
+
+                taskObject.remove("scheduled_end_time");
+                taskObject.addProperty("scheduled_end_time", solution.getFinishTime());
+
+                taskObject.remove("scheduled_machine");
+                taskObject.addProperty("scheduled_machine", solution.getMachine().getId());
+
+                taskObject.addProperty("score", 0);
+            }
+        }
+
+        String scenario = jsonObject.toString();
+        PrintWriter out = new PrintWriter(outputPath);
+        out.println(scenario);
+        out.close();
     }
 }

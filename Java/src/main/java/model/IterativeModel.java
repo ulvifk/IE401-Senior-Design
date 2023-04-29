@@ -29,7 +29,7 @@ import java.util.ListIterator;
 import java.util.Map;
 
 public class IterativeModel {
-    private final Parameters parameters;
+    private Parameters parameters;
     public Variables variables;
     public double beforeTuneTotalWeightedCompletionTime;
     public double afterTuneTotalWeightedCompletionTime;
@@ -49,45 +49,89 @@ public class IterativeModel {
     public double beforeTuneObjective = 0;
     public double afterTuneObjective = 0;
 
+    public double lowTotalWeightedCompletionTime = 0;
+    public double mediumTotalWeightedCompletionTime = 0;
+    public double highTotalWeightedCompletionTime = 0;
+
+    public double lowTotalWeightedTardiness = 0;
+    public double mediumTotalWeightedTardiness = 0;
+    public double highTotalWeightedTardiness = 0;
+    private int timeWindowLength;
+
 
     public IterativeModel(String inputPath, int timeWindowLength) throws Exception {
+        this.timeWindowLength = timeWindowLength;
         this.parameters = new Parameters(timeWindowLength, false);
         this.parameters.readData(inputPath);
         this.solutions = new LinkedList<>();
         this.inputPath = inputPath;
     }
 
-    public void optimize(int timeLimit, boolean isWriteLp, String logPath) throws Exception {
+    public void optimize(int timeLimit, boolean isWriteLp, String logPath, String inputPath, String outputDirectory) throws Exception {
         Priority[] priorities = {Priority.HIGH, Priority.MEDIUM, Priority.LOW};
         int timePerPriority = timeLimit / 3;
 
         int additionalTimeFromPrevious = 0;
-        for (Priority priority : priorities){
-            System.out.println(String.format("Solving for priority %s", priority));
+        for (int i = 0; i < priorities.length; i++){
+            try {
+                Priority priority = priorities[i];
+                System.out.println(String.format("Solving for priority %s", priority));
 
-            Parameters priorityParameters =getPriorityParameters(priority);
-            Model model = new Model(priorityParameters);
-            model.create();
+                Parameters priorityParameters = getPriorityParameters(priority);
+                Model model = new Model(priorityParameters);
+                model.create();
 
-            int timeLimit1 = timePerPriority + additionalTimeFromPrevious;
-            model.optimize(timeLimit1, isWriteLp, logPath);
-            List<Solution> newSolutions = getSolutions(model.variables);
-            this.solutions.addAll(newSolutions);
+                int timeLimit1 = timePerPriority + additionalTimeFromPrevious;
+                model.optimize(timeLimit1, isWriteLp, logPath);
 
-            double cpuTime = model.cpuTime;
-            additionalTimeFromPrevious = (int) Math.max(0, timeLimit1 - cpuTime);
+                List<Solution> newSolutions = getSolutions(model.variables);
+                this.solutions.addAll(newSolutions);
 
-            if (priority == Priority.HIGH){
-                this.highCpuTime = cpuTime;
-            } else if (priority == Priority.MEDIUM){
-                this.mediumCpuTime = cpuTime;
-            } else if (priority == Priority.LOW){
-                this.lowCpuTime = cpuTime;
+                List<Solution> dummyList = new LinkedList<>();
+                for (Solution solution : this.solutions) {
+                    dummyList.add(new Solution(solution.getTask(), solution.getMachine(), solution.getStartTime(), solution.getFinishTime()));
+                }
+                revokeDiscretization(dummyList);
+                ListIterator<Solution> iterator = dummyList.listIterator();
+                while (iterator.hasNext()) {
+                    Solution solution = iterator.next();
+                    if (solution.getTask().getPriorityEnum() != priority) {
+                        iterator.remove();
+                    }
+                }
+                model.calculateKips(dummyList);
+
+                double cpuTime = model.cpuTime;
+                additionalTimeFromPrevious = (int) Math.max(0, timeLimit1 - cpuTime);
+
+                if (priority == Priority.HIGH) {
+                    this.highCpuTime = cpuTime;
+                    this.highTotalWeightedCompletionTime = model.totalWeightedCompletionTime;
+                    this.highTotalWeightedTardiness = model.totalWeightedTardiness;
+                    model.writeSolutionsWithSolutions(dummyList, inputPath, outputDirectory + "model_solution_high.json");
+                    model.writeStats(outputDirectory + "model_stats_high.json");
+                } else if (priority == Priority.MEDIUM) {
+                    this.mediumCpuTime = cpuTime;
+                    this.mediumTotalWeightedCompletionTime = model.totalWeightedCompletionTime;
+                    this.mediumTotalWeightedTardiness = model.totalWeightedTardiness;
+                    model.writeSolutionsWithSolutions(dummyList, inputPath, outputDirectory + "model_solution_medium.json");
+                    model.writeStats(outputDirectory + "model_stats_medium.json");
+                } else if (priority == Priority.LOW) {
+                    this.lowCpuTime = cpuTime;
+                    this.lowTotalWeightedCompletionTime = model.totalWeightedCompletionTime;
+                    this.lowTotalWeightedTardiness = model.totalWeightedTardiness;
+                    model.writeSolutionsWithSolutions(dummyList, inputPath, outputDirectory + "model_solution_low.json");
+                    model.writeStats(outputDirectory + "model_stats_low.json");
+                }
+                model.dispose();
+            } catch (Exception e){
+                this.parameters = new Parameters(timeWindowLength, true, this.parameters.finalTimePointCoeff + 0.1);
+                this.parameters.readData(inputPath);
+                i--;
             }
-            model.dispose();
         }
 
-        revokeDiscretization();
+        revokeDiscretization(this.solutions);
 
         Map<Task, Solution> dummySolutions = new HashMap<>();
         for (Solution solution : this.solutions){
@@ -104,7 +148,7 @@ public class IterativeModel {
         if (additionalTimeFromPrevious > 5){
             System.out.println("Further optimizing...");
 
-            Parameters newParameters = new Parameters(1, false);
+            Parameters newParameters = new Parameters(1, false, this.parameters.finalTimePointCoeff);
             newParameters.readData(inputPath);
             Model fullModel = new Model(newParameters);
             fullModel.create();
@@ -154,7 +198,7 @@ public class IterativeModel {
         return solutions;
     }
 
-    private void revokeDiscretization() {
+    private void revokeDiscretization(List<Solution> solutions) {
         Map<Task, Pair<Machine, Integer>> taskMapping = new HashMap<>();
         Map<Machine, List<Task>> machineOrderings = new HashMap<>();
         for (Machine machine : parameters.getSetOfMachines()){
@@ -186,7 +230,7 @@ public class IterativeModel {
             }
         }
 
-        List<Task> unassignedTasks = new LinkedList<>(parameters.getSetOfTasks());
+        List<Task> unassignedTasks = new LinkedList<>(taskMapping.keySet());
         Map<Task, Double> startTimes = new HashMap<>();
         Map<Task, Double> endTimes = new HashMap<>();
 
@@ -214,7 +258,7 @@ public class IterativeModel {
             }
         }
 
-        for (Solution solution : this.solutions){
+        for (Solution solution : solutions){
             solution.setStartTime(startTimes.get(solution.getTask()));
             solution.setFinishTime(endTimes.get(solution.getTask()));
         }

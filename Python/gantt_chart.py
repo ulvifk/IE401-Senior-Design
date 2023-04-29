@@ -22,10 +22,16 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
             df.loc[len(df)] = row
 
         for task in job["tasks"]:
-            row = [int(job["id"]), int(task["id"]), task["type"], int(task["scheduled_machine"]),
-                   float(task["processing_time"]), float(task["scheduled_start_time"]), int(job["deadline"]),
-                   job["priority"], float(task["scheduled_end_time"]), float(task["score"])]
-            df.loc[len(df)] = row
+            try:
+                row = [int(job["id"]), int(task["id"]), task["type"], int(task["scheduled_machine"]),
+                       float(task["processing_time"]), float(task["scheduled_start_time"]), int(job["deadline"]),
+                       job["priority"], float(task["scheduled_end_time"]), float(task["score"])]
+                df.loc[len(df)] = row
+            except:
+                row = [int(job["id"]), int(task["id"]), task["type"], int(task["scheduled_machine"]),
+                       0, 0, int(job["deadline"]),
+                       job["priority"], 0, 0]
+                df.loc[len(df)] = row
 
     df["delta"] = df["end"] - df["scheduled_time"]
 
@@ -101,13 +107,15 @@ def create_gantt_chart(title, scenario_path: str, stats_path: str, save_path="")
 
 
 if __name__ == "__main__":
-    for seed in [0]:
-        for n in [20]:
-            for inc in [5]:
-                for machine_count in [1]:
-                    normal = f"../Java/output/pure_mip/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_solution.json"
-                    stats = f"../Java/output/pure_mip/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_stats.json"
-                    create_gantt_chart("Normal", normal, stats)
+
+    for priority in ["high"]:
+        for seed in [2]:
+            for n in [20]:
+                for inc in [2]:
+                    for machine_count in [2]:
+                        normal = f"../Java/output/iterative_model_2_machine/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_solution.json"
+                        stats = f"../Java/output/iterative_model_2_machine/scenario_seed_{seed}_nJob_{n}_machineCount_{machine_count}/mip_increment_{inc}/model_stats.json"
+                        create_gantt_chart("Normal", normal, stats)
 
 
 

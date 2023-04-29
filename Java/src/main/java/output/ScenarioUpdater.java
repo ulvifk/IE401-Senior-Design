@@ -39,6 +39,8 @@ public class ScenarioUpdater {
             JsonObject jobObject = jobElement.getAsJsonObject();
             int jobId = jobObject.get("id").getAsInt();
             Job job = parameters.getSetOfJobs().stream().filter(job1 -> job1.getId() == jobId).findAny().orElse(null);
+            if (job == null) continue;
+
 
             JsonArray taskArray = jobObject.getAsJsonArray("tasks");
             for(JsonElement taskElement : taskArray){
