@@ -10,7 +10,7 @@ import java.util.List;
 public class main_mip_run {
     public static void main(String[] args) throws Exception {
         Integer[] n_jobs = {40, 50};
-        Integer[] machineCounts = {1, 2};
+        Integer[] machineCounts = {2};
         Integer[] instances = {0};
         Integer[] increments = {1, 2, 5};
 
