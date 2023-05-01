@@ -10,9 +10,9 @@ import java.util.List;
 
 public class iterative_model {
     public static void main(String[] args) throws Exception {
-        Integer[] n_jobs = {20, 30, 40, 50};
-        Integer[] machineCounts = {2};
-        Integer[] instances = {0, 1, 2, 3, 4};
+        Integer[] n_jobs = {40, 50};
+        Integer[] machineCounts = {1, 2};
+        Integer[] instances = {0};
         Integer[] increments = {1, 2};
 
         int highWeight = 1;
@@ -20,7 +20,7 @@ public class iterative_model {
         int lowWeight = 4;
         boolean doReduce = false;
 
-        String keyWord = "iterative_model_2_machine";
+        String keyWord = "special_iterative";
 
         String summaryDirectory = String.format("Java/output/%s", keyWord);
         File directoryFile = new File(summaryDirectory);

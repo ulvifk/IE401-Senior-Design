@@ -9,9 +9,9 @@ import java.util.List;
 
 public class main_mip_run {
     public static void main(String[] args) throws Exception {
-        Integer[] n_jobs = {20, 30, 40, 50};
-        Integer[] machineCounts = {2};
-        Integer[] instances = {0, 1, 2, 3, 4};
+        Integer[] n_jobs = {40, 50};
+        Integer[] machineCounts = {1, 2};
+        Integer[] instances = {0};
         Integer[] increments = {1, 2, 5};
 
         int highWeight = 1;
@@ -19,7 +19,7 @@ public class main_mip_run {
         int lowWeight = 4;
         boolean doReduce = false;
 
-        String keyWord = "pure_mip_2_machine";
+        String keyWord = "special_mip";
 
         String summaryDirectory = String.format("Java/output/%s", keyWord);
         File directoryFile = new File(summaryDirectory);
@@ -36,7 +36,7 @@ public class main_mip_run {
             for (int seed : instances){
                 for (int increment : increments) {
                     for (int machineCount : machineCounts) {
-                        String inputPath = String.format("Java/input/scenario_%d_%d_%d.json", seed, n_job, machineCount);
+                        String inputPath = String.format("Java/input_special/scenario_%d_%d_%d.json", seed, n_job, machineCount);
                         String outputDirectory = String.format("Java/output/%s/scenario_seed_%d_nJob_%d_machineCount_%d/mip_increment_%d", keyWord, seed, n_job, machineCount, increment);
 
                         directoryFile = new File(outputDirectory);
@@ -44,7 +44,7 @@ public class main_mip_run {
                             directoryFile.mkdirs();
                         }
 
-                        Parameters parameters = new Parameters(increment, doReduce);
+                        Parameters parameters = new Parameters(increment, doReduce, 1.5);
                         parameters.highWeight = highWeight;
                         parameters.mediumWeight = mediumWeight;
                         parameters.lowWeight = lowWeight;
