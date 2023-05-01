@@ -12,7 +12,7 @@ public class iterative_model {
     public static void main(String[] args) throws Exception {
         Integer[] n_jobs = {40, 50};
         Integer[] machineCounts = {2};
-        Integer[] instances = {0};
+        Integer[] instances = {0, 1, 2};
         Integer[] increments = {1, 2};
 
         int highWeight = 1;
@@ -43,7 +43,7 @@ public class iterative_model {
             for (int seed : instances){
                 for (int increment : increments) {
                     for (int machineCount : machineCounts) {
-                        String inputPath = String.format("Java/input/scenario_%d_%d_%d.json", seed, n_job, machineCount);
+                        String inputPath = String.format("Java/input_special/scenario_%d_%d_%d.json", seed, n_job, machineCount);
                         String outputDirectory = String.format("Java/output/%s/scenario_seed_%d_nJob_%d_machineCount_%d/mip_increment_%d", keyWord, seed, n_job, machineCount, increment);
 
                         directoryFile = new File(outputDirectory);

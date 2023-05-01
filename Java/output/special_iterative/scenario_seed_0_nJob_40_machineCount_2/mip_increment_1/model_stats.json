@@ -1,1 +1,1 @@
-{"total_weighted_completion_time":17731.0,"deviation_from_earlier_plan":0.0,"total_tardiness":23993.0,"objective":257661.0,"gap":0.16319782705234842,"cpu_time":597.8143181800842,"n_jobs":40,"n_machines":12,"n_tasks":121,"increment":1}
+{"total_weighted_completion_time":20233.0,"deviation_from_earlier_plan":0.0,"total_tardiness":1705.0,"objective":37283.0,"gap":0.4742912319287611,"cpu_time":598.1801433563232,"n_jobs":40,"n_machines":12,"n_tasks":121,"increment":1}

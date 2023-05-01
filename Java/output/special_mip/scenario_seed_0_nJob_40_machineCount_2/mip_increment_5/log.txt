@@ -1,5 +1,5 @@
 
-Gurobi 9.5.2 (mac64[arm]) logging started Mon May  1 12:27:37 2023
+Gurobi 9.5.2 (mac64[arm]) logging started Mon May  1 17:16:25 2023
 
 Set parameter LogFile to value "Java/output/special_mip/scenario_seed_0_nJob_40_machineCount_2/mip_increment_5/log.txt"
 Gurobi Optimizer version 9.5.2 build v9.5.2rc0 (mac64[arm])
@@ -20,7 +20,7 @@ Found heuristic solution: objective 1.777028e+07
 Variable types: 0 continuous, 9746 integer (9730 binary)
 Found heuristic solution: objective 1.752936e+07
 
-Root relaxation: objective 1.688295e+04, 4896 iterations, 0.21 seconds (0.41 work units)
+Root relaxation: objective 1.688295e+04, 4896 iterations, 0.22 seconds (0.41 work units)
 
     Nodes    |    Current Node    |     Objective Bounds      |     Work
  Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
@@ -144,7 +144,7 @@ H  149   164                    18872.999996 17723.9759  6.09%   551   13s
 H  159   164                    18868.000000 17723.9759  6.06%   547   13s
 H  213   225                    18853.000000 17723.9759  5.99%   543   14s
 H  218   225                    18738.000000 17723.9759  5.41%   537   14s
-   224   249 17857.5098   25  403 18738.0000 17723.9759  5.41%   532   15s
+   248   276 17893.3627   30  374 18738.0000 17723.9759  5.41%   533   15s
 H  698   684                    18737.000000 17723.9759  5.41%   427   18s
 H 1194   865                    18275.000000 17725.2359  3.01%   351   19s
   1285   777 18037.7844   21  539 18275.0000 17725.2359  3.01%   335   20s
